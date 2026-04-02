@@ -1,15 +1,8 @@
 import { useEffect, useId, useState } from "react";
-import mermaid from "mermaid";
 
 type MermaidViewerProps = {
   chart: string;
 };
-
-mermaid.initialize({
-  startOnLoad: false,
-  securityLevel: "loose",
-  theme: "neutral"
-});
 
 export function MermaidViewer({ chart }: MermaidViewerProps) {
   const [svg, setSvg] = useState<string>("");
@@ -18,20 +11,29 @@ export function MermaidViewer({ chart }: MermaidViewerProps) {
 
   useEffect(() => {
     let cancelled = false;
+    const renderId = `mermaid-${elementId.replace(/:/g, "-")}`;
 
-    mermaid
-      .render(`mermaid-${elementId}`, chart)
-      .then(({ svg: renderedSvg }) => {
+    async function renderDiagram() {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "loose",
+          theme: "neutral"
+        });
+        const { svg: renderedSvg } = await mermaid.render(renderId, chart);
         if (!cancelled) {
           setSvg(renderedSvg);
           setError("");
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) {
           setError("Diagram could not be rendered.");
         }
-      });
+      }
+    }
+
+    renderDiagram();
 
     return () => {
       cancelled = true;

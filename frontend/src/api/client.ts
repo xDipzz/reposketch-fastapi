@@ -14,6 +14,12 @@ export type Diagram = {
   mermaid: string;
 };
 
+export type DiagramResponse = {
+  repo_id: string;
+  repo_name: string;
+  diagrams: Diagram[];
+};
+
 export type Summary = {
   repo_id: string;
   repo_name: string;
@@ -29,6 +35,28 @@ export type Summary = {
   entry_points: string[];
   major_modules: string[];
   languages: Record<string, number>;
+};
+
+export type RepoLoadResponse = {
+  metadata: {
+    repo_id: string;
+    repo_name: string;
+    repo_url: string;
+    warnings: string[];
+  };
+  summary: Summary;
+  diagrams: Diagram[];
+  warnings: string[];
+};
+
+export type IndexResponse = {
+  repo_id: string;
+  repo_name: string;
+  collection_name: string;
+  indexed_files: number;
+  indexed_chunks: number;
+  status: string;
+  indexed_at: string;
 };
 
 export type AskResponse = {
@@ -47,13 +75,47 @@ export type AskResponse = {
 
 export async function loadRepository(repoUrl: string) {
   const { data } = await apiClient.post("/analyze/repo-load", { repo_url: repoUrl });
-  return data as { summary: Summary; diagrams: Diagram[]; metadata: { warnings: string[] } };
+  return data as RepoLoadResponse;
+}
+
+export async function fetchSummary(repoId: string) {
+  const { data } = await apiClient.get("/analyze/summary", {
+    params: { repo_id: repoId }
+  });
+  return data as Summary;
+}
+
+export async function fetchDiagrams(repoId: string) {
+  const { data } = await apiClient.get("/analyze/diagrams", {
+    params: { repo_id: repoId }
+  });
+  return data as DiagramResponse;
+}
+
+export async function indexRepository(repoId: string) {
+  const { data } = await apiClient.post("/analyze/index", {
+    repo_id: repoId,
+    force_reindex: true
+  });
+  return data as IndexResponse;
 }
 
 export async function askRepository(repoId: string | null, question: string) {
   const { data } = await apiClient.post("/ask", {
     repo_id: repoId,
-    question
+    question,
+    top_k: 6
   });
   return data as AskResponse;
+}
+
+export function extractApiError(error: unknown) {
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail;
+    if (typeof detail === "string" && detail.trim()) {
+      return detail;
+    }
+    return error.message;
+  }
+  return "Something went wrong while talking to the backend.";
 }

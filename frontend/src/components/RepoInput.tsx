@@ -1,11 +1,18 @@
 type RepoInputProps = {
   repoUrl: string;
   loading: boolean;
+  statusText: string | null;
   onChange: (value: string) => void;
   onSubmit: () => void;
 };
 
-export function RepoInput({ repoUrl, loading, onChange, onSubmit }: RepoInputProps) {
+const sampleRepos = [
+  "https://github.com/pallets/click",
+  "https://github.com/tiangolo/fastapi",
+  "https://github.com/pydantic/pydantic"
+];
+
+export function RepoInput({ repoUrl, loading, statusText, onChange, onSubmit }: RepoInputProps) {
   return (
     <section className="panel panel-hero">
       <div className="space-y-3">
@@ -24,11 +31,27 @@ export function RepoInput({ repoUrl, loading, onChange, onSubmit }: RepoInputPro
           className="repo-input"
           placeholder="https://github.com/owner/project"
           value={repoUrl}
+          disabled={loading}
           onChange={(event) => onChange(event.target.value)}
         />
         <button className="primary-button" disabled={loading || !repoUrl.trim()} onClick={onSubmit}>
-          {loading ? "Analyzing..." : "Analyze repository"}
+          {loading ? "Working..." : "Analyze repository"}
         </button>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <p className="mini-label">Try a public repository</p>
+          <div className="sample-list">
+            {sampleRepos.map((item) => (
+              <button key={item} className="sample-chip" onClick={() => onChange(item)}>
+                {item.replace("https://github.com/", "")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {statusText ? <div className="status-banner">{statusText}</div> : null}
       </div>
     </section>
   );

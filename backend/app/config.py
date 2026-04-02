@@ -9,7 +9,18 @@ from pydantic import BaseModel, Field
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = BACKEND_DIR.parent
 load_dotenv(BACKEND_DIR / ".env")
+
+
+def _resolve_path(raw_value: str | Path | None, default: Path) -> Path:
+    if raw_value is None:
+        return default.resolve()
+
+    candidate = Path(raw_value)
+    if candidate.is_absolute():
+        return candidate
+    return (PROJECT_ROOT / candidate).resolve()
 
 
 class Settings(BaseModel):
@@ -20,13 +31,17 @@ class Settings(BaseModel):
     frontend_origin: str = Field(default=os.getenv("FRONTEND_ORIGIN", "http://localhost:5173"))
 
     repo_storage_dir: Path = Field(
-        default=Path(os.getenv("REPO_STORAGE_DIR", BACKEND_DIR / "storage" / "repos"))
+        default=_resolve_path(os.getenv("REPO_STORAGE_DIR"), BACKEND_DIR / "storage" / "repos")
     )
     analysis_storage_dir: Path = Field(
-        default=Path(os.getenv("ANALYSIS_STORAGE_DIR", BACKEND_DIR / "storage" / "analysis"))
+        default=_resolve_path(
+            os.getenv("ANALYSIS_STORAGE_DIR"), BACKEND_DIR / "storage" / "analysis"
+        )
     )
     chroma_persist_dir: Path = Field(
-        default=Path(os.getenv("CHROMA_PERSIST_DIR", BACKEND_DIR / "storage" / "chroma"))
+        default=_resolve_path(
+            os.getenv("CHROMA_PERSIST_DIR"), BACKEND_DIR / "storage" / "chroma"
+        )
     )
 
     max_file_size_kb: int = Field(default=int(os.getenv("MAX_FILE_SIZE_KB", "256")))

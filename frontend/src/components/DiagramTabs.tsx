@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { Diagram } from "../api/client";
 import { MermaidViewer } from "./MermaidViewer";
@@ -11,6 +11,10 @@ type DiagramTabsProps = {
 export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
   const [activeId, setActiveId] = useState<string | null>(diagrams[0]?.id ?? null);
   const activeDiagram = diagrams.find((diagram) => diagram.id === activeId) ?? diagrams[0] ?? null;
+
+  useEffect(() => {
+    setActiveId(diagrams[0]?.id ?? null);
+  }, [diagrams]);
 
   if (loading) {
     return (
@@ -38,6 +42,9 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
         <div>
           <p className="eyebrow">Architecture diagrams</p>
           <h2 className="panel-title">Mermaid views</h2>
+          <p className="panel-copy">
+            Generated from parsed repository structure and internal import relationships.
+          </p>
         </div>
       </div>
 
