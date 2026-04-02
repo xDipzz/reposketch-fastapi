@@ -2,9 +2,10 @@ import { useEffect, useId, useRef, useState } from "react";
 
 type MermaidViewerProps = {
   chart: string;
+  layoutMode?: "fit-width" | "natural";
 };
 
-export function MermaidViewer({ chart }: MermaidViewerProps) {
+export function MermaidViewer({ chart, layoutMode = "natural" }: MermaidViewerProps) {
   const [svg, setSvg] = useState("");
   const [error, setError] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -82,14 +83,21 @@ export function MermaidViewer({ chart }: MermaidViewerProps) {
       svgElement.getBoundingClientRect().height ||
       720;
     const parentWidth = containerRef.current?.parentElement?.clientWidth ?? baseWidth;
-    const scaledWidth = Math.max(baseWidth * zoom, parentWidth - 24);
-    const scaledHeight = baseHeight * zoom;
+    const fittedWidth = Math.max(parentWidth - 24, 320);
+    const scaledWidth =
+      layoutMode === "fit-width"
+        ? fittedWidth * zoom
+        : Math.max(baseWidth * zoom, fittedWidth);
+    const scaledHeight =
+      layoutMode === "fit-width"
+        ? (baseHeight / Math.max(baseWidth, 1)) * scaledWidth
+        : baseHeight * zoom;
 
     svgElement.style.width = `${Math.round(scaledWidth)}px`;
     svgElement.style.height = `${Math.round(scaledHeight)}px`;
     svgElement.style.maxWidth = "none";
     svgElement.style.display = "block";
-  }, [svg, zoom, isFullscreen]);
+  }, [svg, zoom, isFullscreen, layoutMode]);
 
   const toggleFullscreen = async () => {
     const viewer = viewerRef.current;
@@ -144,8 +152,17 @@ export function MermaidViewer({ chart }: MermaidViewerProps) {
     "border border-slate-200 bg-slate-100/80 shadow-inner",
     isFullscreen
       ? "h-screen w-full overflow-auto rounded-none bg-slate-100"
-      : "w-max min-w-full rounded-[28px] overflow-visible"
+      : layoutMode === "fit-width"
+        ? "w-full min-w-0 rounded-[28px] overflow-visible"
+        : "w-max min-w-full rounded-[28px] overflow-visible"
   ].join(" ");
+
+  const canvasClasses =
+    layoutMode === "fit-width"
+      ? "w-full min-w-0 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-6 xl:p-8"
+      : "w-max min-w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-6 xl:p-8";
+
+  const diagramClasses = layoutMode === "fit-width" ? "w-full min-w-0" : "w-max min-w-full";
 
   return (
     <div ref={viewerRef} className={shellClasses}>
@@ -173,8 +190,8 @@ export function MermaidViewer({ chart }: MermaidViewerProps) {
       </div>
 
       <div className={isFullscreen ? "overflow-auto px-4 py-4 md:px-6 xl:px-8" : "px-4 py-4 md:px-6 xl:px-8"}>
-        <div className="w-max min-w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-6 xl:p-8">
-          <div ref={containerRef} className="w-max min-w-full" dangerouslySetInnerHTML={{ __html: svg }} />
+        <div className={canvasClasses}>
+          <div ref={containerRef} className={diagramClasses} dangerouslySetInnerHTML={{ __html: svg }} />
         </div>
       </div>
     </div>

@@ -11,6 +11,8 @@ type DiagramTabsProps = {
 export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
   const [activeId, setActiveId] = useState<string | null>(diagrams[0]?.id ?? null);
   const activeDiagram = diagrams.find((diagram) => diagram.id === activeId) ?? diagrams[0] ?? null;
+  const layoutMode =
+    activeDiagram?.id === "project-structure" ? "fit-width" : "natural";
 
   useEffect(() => {
     setActiveId(diagrams[0]?.id ?? null);
@@ -53,7 +55,11 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
           <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-gray-500">
             Views ({diagrams.length})
           </h3>
-          <p className="hidden text-xs text-gray-500 lg:block">Choose a view. The page will expand with the diagram.</p>
+          <p className="hidden text-xs text-gray-500 lg:block">
+            {layoutMode === "fit-width"
+              ? "Project structure is fitted to the stage."
+              : "Use zoom or full screen for dense diagrams."}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {diagrams.map((diagram, index) => {
@@ -91,7 +97,7 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
               <p className="mt-2 max-w-4xl text-sm leading-relaxed text-gray-600">{activeDiagram.description}</p>
             </div>
             <div className="bg-slate-50 px-4 py-4 md:px-6 md:py-6">
-              <MermaidViewer chart={activeDiagram.mermaid} />
+              <MermaidViewer chart={activeDiagram.mermaid} layoutMode={layoutMode} />
             </div>
           </>
         ) : null}
