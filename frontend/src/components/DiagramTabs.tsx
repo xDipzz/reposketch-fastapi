@@ -18,7 +18,7 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
 
   if (loading) {
     return (
-      <section className="panel">
+      <section className="panel diagram-panel">
         <p className="eyebrow">Architecture diagrams</p>
         <div className="placeholder-card">Generating repository diagrams...</div>
       </section>
@@ -27,7 +27,7 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
 
   if (!diagrams.length) {
     return (
-      <section className="panel">
+      <section className="panel diagram-panel">
         <p className="eyebrow">Architecture diagrams</p>
         <div className="placeholder-card">
           Mermaid diagrams will appear here once the repository structure has been analyzed.
@@ -37,33 +37,48 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
   }
 
   return (
-    <section className="panel">
-      <div className="panel-header">
+    <section className="panel diagram-panel">
+      <div className="diagram-header">
         <div>
           <p className="eyebrow">Architecture diagrams</p>
-          <h2 className="panel-title">Mermaid views</h2>
+          <h2 className="panel-title">Diagram workspace</h2>
           <p className="panel-copy">
             Generated from parsed repository structure and internal import relationships.
           </p>
         </div>
+        <div className="diagram-badge-group">
+          <div className="badge">Mermaid</div>
+          <div className="badge muted">{diagrams.length} views</div>
+        </div>
       </div>
 
-      <div className="tab-row">
-        {diagrams.map((diagram) => (
+      <div className="diagram-tab-row">
+        {diagrams.map((diagram, index) => (
           <button
             key={diagram.id}
-            className={diagram.id === activeDiagram?.id ? "tab active" : "tab"}
+            className={diagram.id === activeDiagram?.id ? "tab active diagram-tab" : "tab diagram-tab"}
             onClick={() => setActiveId(diagram.id)}
+            type="button"
           >
-            {diagram.title}
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{diagram.title}</strong>
           </button>
         ))}
       </div>
 
       {activeDiagram ? (
-        <div className="space-y-4">
-          <p className="panel-copy">{activeDiagram.description}</p>
-          <MermaidViewer chart={activeDiagram.mermaid} />
+        <div className="diagram-stage">
+          <div className="diagram-stage-head">
+            <div>
+              <p className="mini-label">Active view</p>
+              <h3>{activeDiagram.title}</h3>
+            </div>
+            <p className="diagram-description">{activeDiagram.description}</p>
+          </div>
+
+          <div className="diagram-canvas">
+            <MermaidViewer chart={activeDiagram.mermaid} />
+          </div>
         </div>
       ) : null}
     </section>

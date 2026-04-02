@@ -10,9 +10,19 @@ export function SourceList({ sources }: SourceListProps) {
   return (
     <ul className="source-list">
       {sources.map((source) => (
-        <li key={`${source.file_path}-${source.symbol_names.join("-")}`}>
-          <strong>{source.file_path}</strong>
-          <span>{source.symbol_names.length ? source.symbol_names.join(", ") : "file reference"}</span>
+        <li key={`${source.file_path}-${source.symbol_names.join("-")}`} className="source-card">
+          <strong className="source-path">{source.file_path}</strong>
+          <div className="source-pill-row">
+            {source.symbol_names.length ? (
+              source.symbol_names.map((symbolName) => (
+                <span key={symbolName} className="source-symbol">
+                  {symbolName}
+                </span>
+              ))
+            ) : (
+              <span className="source-symbol muted">file reference</span>
+            )}
+          </div>
         </li>
       ))}
     </ul>

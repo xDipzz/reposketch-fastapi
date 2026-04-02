@@ -31,6 +31,7 @@ export function AskPanel({
   onAsk
 }: AskPanelProps) {
   const [question, setQuestion] = useState("");
+  const visibleChunks = response?.retrieved_chunks.slice(0, 6) ?? [];
 
   const submit = () => {
     const nextQuestion = question.trim();
@@ -41,37 +42,53 @@ export function AskPanel({
   };
 
   return (
-    <aside className="panel ask-panel">
-      <div className="panel-header">
+    <section className="panel ask-workspace">
+      <div className="ask-header">
         <div>
           <p className="eyebrow">Ask Repo</p>
-          <h2 className="panel-title">Grounded repository Q&amp;A</h2>
+          <h2 className="panel-title">Interrogate the codebase</h2>
+          <p className="panel-copy">
+            Ask architecture, routing, configuration, or flow questions. Answers stay pinned to
+            retrieved repository context.
+          </p>
         </div>
+        <div className="badge">grounded answers only</div>
       </div>
 
-      <div className="space-y-3">
+      <div className="ask-composer">
         <textarea
           className="ask-input"
           placeholder="How does authentication work?"
-          rows={6}
+          rows={5}
           value={question}
           disabled={disabled}
+          onKeyDown={(event) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+              event.preventDefault();
+              submit();
+            }
+          }}
           onChange={(event) => setQuestion(event.target.value)}
         />
-        <button className="primary-button" disabled={disabled || loading} onClick={submit}>
-          {loading ? "Thinking..." : "Ask repository"}
-        </button>
+        <div className="ask-actions">
+          <button className="primary-button" disabled={disabled || loading} onClick={submit} type="button">
+            {loading ? "Thinking..." : "Ask repository"}
+          </button>
+          <span className="keyboard-hint">Ctrl/Cmd + Enter</span>
+        </div>
       </div>
 
       {statusMessage ? <div className="status-banner subtle">{statusMessage}</div> : null}
       {error ? <div className="warning-card">{error}</div> : null}
-      {disabled && disabledReason ? <div className="placeholder-card compact">{disabledReason}</div> : null}
+      {disabled && disabledReason ? (
+        <div className="placeholder-card compact">{disabledReason}</div>
+      ) : null}
 
-      <div>
+      <div className="ask-samples">
         <p className="mini-label">Sample questions</p>
         <div className="sample-list">
           {sampleQuestions.map((item) => (
-            <button key={item} className="sample-chip" onClick={() => setQuestion(item)}>
+            <button key={item} className="sample-chip" onClick={() => setQuestion(item)} type="button">
               {item}
             </button>
           ))}
@@ -80,39 +97,49 @@ export function AskPanel({
 
       <div className="answer-shell">
         {response ? (
-          <>
-            <div className="markdown-body">
-              <ReactMarkdown>{response.answer}</ReactMarkdown>
+          <div className="answer-layout">
+            <article className="answer-card">
+              <div className="answer-card-head">
+                <p className="mini-label">Response</p>
+                <div className="badge muted">{response.repo_name}</div>
+              </div>
+              <div className="markdown-body">
+                <ReactMarkdown>{response.answer}</ReactMarkdown>
+              </div>
+            </article>
+
+            <div className="evidence-stack">
+              <section className="evidence-card">
+                <p className="mini-label">Sources</p>
+                <SourceList sources={response.sources} />
+              </section>
+
+              <section className="evidence-card">
+                <p className="mini-label">Retrieved context</p>
+                <ul className="context-list">
+                  {visibleChunks.map((chunk) => (
+                    <li key={`${chunk.file_path}-${chunk.chunk_index}`} className="context-card">
+                      <div className="context-header">
+                        <strong>{chunk.file_path}</strong>
+                        <span>chunk {chunk.chunk_index}</span>
+                      </div>
+                      {chunk.symbol_names.length ? (
+                        <p className="context-symbols">{chunk.symbol_names.join(", ")}</p>
+                      ) : null}
+                      <p>{chunk.preview}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             </div>
-            <div className="space-y-3">
-              <p className="mini-label">Sources</p>
-              <SourceList sources={response.sources} />
-            </div>
-            <div className="space-y-3">
-              <p className="mini-label">Retrieved context</p>
-              <ul className="context-list">
-                {response.retrieved_chunks.map((chunk) => (
-                  <li key={`${chunk.file_path}-${chunk.chunk_index}`}>
-                    <div className="context-header">
-                      <strong>{chunk.file_path}</strong>
-                      <span>chunk {chunk.chunk_index}</span>
-                    </div>
-                    {chunk.symbol_names.length ? (
-                      <p className="context-symbols">{chunk.symbol_names.join(", ")}</p>
-                    ) : null}
-                    <p>{chunk.preview}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </>
+          </div>
         ) : (
           <div className="placeholder-card">
-            Ask a question after analyzing a repository. The answer panel will stay grounded in the
-            indexed source files.
+            Ask a question after analyzing a repository. This workspace will return a grounded
+            answer, explicit source files, and the chunk evidence used to produce it.
           </div>
         )}
       </div>
-    </aside>
+    </section>
   );
 }

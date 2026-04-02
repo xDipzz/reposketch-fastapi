@@ -8,9 +8,27 @@ type SummaryPanelProps = {
 };
 
 export function SummaryPanel({ summary, loading, warnings, indexMessage }: SummaryPanelProps) {
+  const renderTokens = (items: string[], empty: string, limit = 8) => {
+    if (!items.length) {
+      return <li>{empty}</li>;
+    }
+
+    const visible = items.slice(0, limit);
+    const remainder = items.length - visible.length;
+
+    return (
+      <>
+        {visible.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+        {remainder > 0 ? <li>+{remainder} more</li> : null}
+      </>
+    );
+  };
+
   if (loading) {
     return (
-      <section className="panel">
+      <section className="panel summary-panel">
         <p className="eyebrow">Repository summary</p>
         <div className="placeholder-card">Scanning folders, symbols, and likely entry points...</div>
       </section>
@@ -19,7 +37,7 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage }: Summa
 
   if (!summary) {
     return (
-      <section className="panel">
+      <section className="panel summary-panel">
         <p className="eyebrow">Repository summary</p>
         <div className="placeholder-card">
           Load a repository to see framework detection, major modules, and important files.
@@ -29,14 +47,17 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage }: Summa
   }
 
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <div>
+    <section className="panel summary-panel">
+      <div className="summary-header">
+        <div className="summary-identity">
           <p className="eyebrow">Repository summary</p>
           <h2 className="panel-title">{summary.repo_name}</h2>
-          <p className="panel-copy">{summary.repo_url}</p>
+          <p className="summary-url">{summary.repo_url}</p>
         </div>
-        <div className="badge">{summary.detected_framework ?? "Framework pending"}</div>
+        <div className="summary-badges">
+          <div className="badge">{summary.detected_framework ?? "Framework pending"}</div>
+          <div className="badge muted">{summary.repo_id}</div>
+        </div>
       </div>
 
       {indexMessage ? <div className="status-banner subtle">{indexMessage}</div> : null}
@@ -50,7 +71,22 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage }: Summa
         </div>
       ) : null}
 
-      <div className="stats-grid">
+      <div className="meta-strip">
+        <div className="meta-card">
+          <span>Loaded</span>
+          <strong>{new Date(summary.loaded_at).toLocaleString()}</strong>
+        </div>
+        <div className="meta-card">
+          <span>Top-level folders</span>
+          <strong>{summary.top_level_folders.length}</strong>
+        </div>
+        <div className="meta-card">
+          <span>Framework</span>
+          <strong>{summary.detected_framework ?? "Unknown"}</strong>
+        </div>
+      </div>
+
+      <div className="stats-grid summary-stats">
         <article className="stat-card">
           <span>Files</span>
           <strong>{summary.file_count}</strong>
@@ -70,40 +106,24 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage }: Summa
       </div>
 
       <div className="summary-grid">
-        <div>
+        <div className="summary-section">
           <h3>Major modules</h3>
-          <ul className="chip-list">
-            {summary.major_modules.length ? (
-              summary.major_modules.map((item) => <li key={item}>{item}</li>)
-            ) : (
-              <li>Pending deeper analysis</li>
-            )}
-          </ul>
+          <ul className="chip-list">{renderTokens(summary.major_modules, "Pending deeper analysis")}</ul>
         </div>
 
-        <div>
+        <div className="summary-section">
           <h3>Entry points</h3>
-          <ul className="chip-list">
-            {summary.entry_points.length ? (
-              summary.entry_points.map((item) => <li key={item}>{item}</li>)
-            ) : (
-              <li>Pending deeper analysis</li>
-            )}
-          </ul>
+          <ul className="chip-list">{renderTokens(summary.entry_points, "Pending deeper analysis")}</ul>
         </div>
 
-        <div>
+        <div className="summary-section">
           <h3>Important files</h3>
           <ul className="chip-list">
-            {summary.important_files.length ? (
-              summary.important_files.map((item) => <li key={item}>{item}</li>)
-            ) : (
-              <li>No standout files detected yet</li>
-            )}
+            {renderTokens(summary.important_files, "No standout files detected yet")}
           </ul>
         </div>
 
-        <div>
+        <div className="summary-section">
           <h3>Languages</h3>
           <ul className="chip-list">
             {Object.entries(summary.languages).length ? (
@@ -116,6 +136,11 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage }: Summa
               <li>No language breakdown available</li>
             )}
           </ul>
+        </div>
+
+        <div className="summary-section">
+          <h3>Top-level folders</h3>
+          <ul className="chip-list">{renderTokens(summary.top_level_folders, "No top-level folders detected")}</ul>
         </div>
       </div>
     </section>

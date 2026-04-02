@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 
 import {
   askRepository,
@@ -11,17 +11,30 @@ import {
   type Diagram,
   type Summary
 } from "./api/client";
-import { AskPanel } from "./components/AskPanel";
-import { DiagramTabs } from "./components/DiagramTabs";
-import { RepoInput } from "./components/RepoInput";
-import { SummaryPanel } from "./components/SummaryPanel";
+import { ArchitectureWorkspace } from "./components/ArchitectureWorkspace";
+import { InterrogateWorkspace } from "./components/InterrogateWorkspace";
+import { OverviewWorkspace } from "./components/OverviewWorkspace";
+import { WorkspaceNav, type WorkspaceView } from "./components/WorkspaceNav";
 
 type IndexState = {
   status: "idle" | "indexing" | "ready" | "error";
   message: string | null;
 };
 
+function getInitialView(): WorkspaceView {
+  if (typeof window === "undefined") {
+    return "briefing";
+  }
+
+  const hash = window.location.hash.replace("#", "");
+  if (hash === "briefing" || hash === "architecture" || hash === "interrogate") {
+    return hash;
+  }
+  return "briefing";
+}
+
 export default function App() {
+  const [view, setView] = useState<WorkspaceView>(getInitialView);
   const [repoUrl, setRepoUrl] = useState("");
   const [repoId, setRepoId] = useState<string | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -37,6 +50,27 @@ export default function App() {
     status: "idle",
     message: "Repo Q&A becomes available after indexing finishes."
   });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "briefing" || hash === "architecture" || hash === "interrogate") {
+        setView(hash);
+      }
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+    };
+  }, []);
+
+  const handleViewChange = (nextView: WorkspaceView) => {
+    startTransition(() => {
+      setView(nextView);
+    });
+    window.history.replaceState(null, "", `#${nextView}`);
+  };
 
   const handleAnalyze = async () => {
     if (!repoUrl.trim()) {
@@ -68,6 +102,7 @@ export default function App() {
 
       setSummary(summaryData);
       setDiagrams(diagramData.diagrams);
+      handleViewChange("architecture");
       setStatusText(`Repository loaded: ${summaryData.repo_name}. Building retrieval index...`);
       setIndexState({
         status: "indexing",
@@ -112,6 +147,7 @@ export default function App() {
       setAskError(null);
       const data = await askRepository(repoId, question);
       setAnswer(data);
+      handleViewChange("interrogate");
     } catch (askRequestError) {
       setAskError(extractApiError(askRequestError));
     } finally {
@@ -132,31 +168,50 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <div className="background-grid" />
+      <div className="ambient-noise" />
+      <div className="ambient-orb orb-a" />
+      <div className="ambient-orb orb-b" />
+      <div className="ambient-orb orb-c" />
 
-      <main className="page">
-        <RepoInput
-          repoUrl={repoUrl}
-          loading={loadingRepo}
-          statusText={statusText}
-          onChange={setRepoUrl}
-          onSubmit={handleAnalyze}
+      <main className="page-frame">
+        <WorkspaceNav
+          activeView={view}
+          indexStatus={indexState.status}
+          repoName={summary?.repo_name ?? null}
+          repoId={repoId}
+          onChange={handleViewChange}
         />
 
         {error ? <div className="error-banner">{error}</div> : null}
 
-        <section className="content-grid">
-          <div className="main-column">
-            <SummaryPanel
-              summary={summary}
-              loading={loadingRepo}
-              warnings={warnings}
-              indexMessage={indexState.message}
-            />
-            <DiagramTabs diagrams={diagrams} loading={loadingRepo} />
-          </div>
+        {view === "briefing" ? (
+          <OverviewWorkspace
+            repoUrl={repoUrl}
+            loading={loadingRepo}
+            statusText={statusText}
+            repoName={summary?.repo_name ?? null}
+            summary={summary}
+            warnings={warnings}
+            indexMessage={indexState.message}
+            indexStatus={indexState.status}
+            onChangeRepoUrl={setRepoUrl}
+            onAnalyze={handleAnalyze}
+            onNavigate={handleViewChange}
+          />
+        ) : null}
 
-          <AskPanel
+        {view === "architecture" ? (
+          <ArchitectureWorkspace
+            summary={summary}
+            diagrams={diagrams}
+            loading={loadingRepo}
+            onNavigate={handleViewChange}
+          />
+        ) : null}
+
+        {view === "interrogate" ? (
+          <InterrogateWorkspace
+            summary={summary}
             response={answer}
             loading={asking}
             disabled={askDisabled}
@@ -164,8 +219,9 @@ export default function App() {
             statusMessage={indexState.message}
             error={askError}
             onAsk={handleAsk}
+            onNavigate={handleViewChange}
           />
-        </section>
+        ) : null}
       </main>
     </div>
   );
