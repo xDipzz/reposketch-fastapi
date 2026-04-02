@@ -17,13 +17,6 @@ type OverviewWorkspaceProps = {
   onNavigate: (view: WorkspaceView) => void;
 };
 
-const suggestedPrompts = [
-  "Which file handles API routing?",
-  "What are the main modules?",
-  "Where is configuration defined?",
-  "What happens at startup?"
-];
-
 export function OverviewWorkspace({
   repoUrl,
   loading,
@@ -37,103 +30,56 @@ export function OverviewWorkspace({
   onAnalyze,
   onNavigate
 }: OverviewWorkspaceProps) {
-  const pipeline = [
-    {
-      label: "Clone",
-      note: "Fetch the repository into local storage.",
-      state: summary || loading ? "done" : "idle"
-    },
-    {
-      label: "Parse",
-      note: "Extract Python symbols, imports, and entry points.",
-      state: summary ? "done" : loading ? "active" : "idle"
-    },
-    {
-      label: "Diagram",
-      note: "Generate project, dependency, and module views.",
-      state: summary ? "done" : loading ? "active" : "idle"
-    },
-    {
-      label: "Index",
-      note: "Chunk repository files into the retrieval store.",
-      state:
-        indexStatus === "ready"
-          ? "done"
-          : indexStatus === "indexing"
-            ? "active"
-            : indexStatus === "error"
-              ? "error"
-              : "idle"
-    }
-  ];
 
-  return (
-    <section className="workspace">
-      <div className="workspace-grid overview-grid">
-        <div className="workspace-main">
-          <RepoInput
-            repoUrl={repoUrl}
-            loading={loading}
-            statusText={statusText}
-            repoName={repoName}
-            indexStatus={indexStatus}
-            onChange={onChangeRepoUrl}
-            onSubmit={onAnalyze}
-          />
-
-          <SummaryPanel
-            summary={summary}
-            loading={loading}
-            warnings={warnings}
-            indexMessage={indexMessage}
-          />
-        </div>
-
-        <aside className="workspace-rail rail-stack">
-          <section className="panel rail-card">
-            <p className="eyebrow">Analysis pipeline</p>
-            <h2 className="panel-title">What RepoSketch is doing</h2>
-            <div className="timeline-list">
-              {pipeline.map((item) => (
-                <div key={item.label} className={`timeline-item ${item.state}`}>
-                  <div className="timeline-marker" />
-                  <div>
-                    <strong>{item.label}</strong>
-                    <p>{item.note}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="panel rail-card">
-            <p className="eyebrow">Workspaces</p>
-            <h2 className="panel-title">Move through the repo</h2>
-            <div className="jump-grid">
-              <button className="secondary-button" onClick={() => onNavigate("architecture")} type="button">
-                Open architecture map
-              </button>
-              <button className="secondary-button" onClick={() => onNavigate("interrogate")} type="button">
-                Open Q&amp;A workspace
-              </button>
-            </div>
-            <p className="panel-copy">
-              The app now behaves like a small analysis suite: briefing for intake, architecture for
-              diagrams, interrogate for evidence-backed answers.
-            </p>
-          </section>
-
-          <section className="panel rail-card">
-            <p className="eyebrow">Suggested prompts</p>
-            <h2 className="panel-title">Good first questions</h2>
-            <ul className="rail-list">
-              {suggestedPrompts.map((prompt) => (
-                <li key={prompt}>{prompt}</li>
-              ))}
-            </ul>
-          </section>
-        </aside>
+  // If we haven't loaded a summary yet, show the hero RepoInput
+  if (!summary && !loading) {
+    return (
+      <div className="max-w-4xl mx-auto mt-12">
+        <RepoInput
+          repoUrl={repoUrl}
+          loading={loading}
+          statusText={statusText}
+          repoName={repoName}
+          indexStatus={indexStatus}
+          onChange={onChangeRepoUrl}
+          onSubmit={onAnalyze}
+        />
       </div>
-    </section>
+    );
+  }
+
+  // Once loading or loaded, show the Summary Panel
+  return (
+    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto">
+      <div className="flex-1">
+        <SummaryPanel
+          summary={summary}
+          loading={loading}
+          warnings={warnings}
+          indexMessage={indexMessage}
+        />
+      </div>
+      <div className="w-full lg:w-80 flex flex-col gap-6 shrink-0">
+        <div className="card p-6">
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Quick Links</h3>
+          <div className="space-y-3">
+            <button 
+              className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors"
+              onClick={() => onNavigate("architecture")}
+            >
+              <strong className="block text-gray-900 font-medium">Architecture Map</strong>
+              <span className="block text-xs text-gray-500 mt-1">View generated Mermaid diagrams</span>
+            </button>
+            <button 
+              className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors"
+              onClick={() => onNavigate("interrogate")}
+            >
+              <strong className="block text-gray-900 font-medium">Ask Repository</strong>
+              <span className="block text-xs text-gray-500 mt-1">Grounded Q&amp;A about codebase</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

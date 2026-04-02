@@ -16,71 +16,27 @@ export function ArchitectureWorkspace({
   onNavigate
 }: ArchitectureWorkspaceProps) {
   return (
-    <section className="workspace">
-      <div className="workspace-grid architecture-grid">
-        <div className="workspace-main">
-          <section className="panel workspace-intro">
-            <p className="eyebrow">Architecture mode</p>
-            <h2 className="panel-title">Repository map</h2>
-            <p className="panel-copy">
-              Use this workspace when you want the repo as a visual system instead of a text report.
-              Each view comes directly from extracted structure and import relationships.
-            </p>
-          </section>
-
-          <DiagramTabs diagrams={diagrams} loading={loading} />
+    <div className="flex flex-col gap-6 h-full max-w-[1600px] mx-auto">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shrink-0">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Architecture Map</h2>
+          <p className="text-sm text-gray-500 mt-1">Generated from parsed repository structure and import relationships.</p>
         </div>
-
-        <aside className="workspace-rail rail-stack">
-          <section className="panel rail-card">
-            <p className="eyebrow">Snapshot</p>
-            <h2 className="panel-title">{summary?.repo_name ?? "No repository loaded"}</h2>
-            <div className="fact-grid">
-              <div className="fact-card">
-                <span>Framework</span>
-                <strong>{summary?.detected_framework ?? "Unknown"}</strong>
-              </div>
-              <div className="fact-card">
-                <span>Files</span>
-                <strong>{summary?.file_count ?? 0}</strong>
-              </div>
-              <div className="fact-card">
-                <span>Indexed</span>
-                <strong>{summary?.indexed_file_count ?? 0}</strong>
-              </div>
-              <div className="fact-card">
-                <span>Modules</span>
-                <strong>{summary?.major_modules.length ?? 0}</strong>
-              </div>
-            </div>
-          </section>
-
-          <section className="panel rail-card">
-            <p className="eyebrow">Hotspots</p>
-            <h2 className="panel-title">Entry points</h2>
-            <ul className="rail-list compact">
-              {(summary?.entry_points.length ? summary.entry_points : ["No entry points detected"]).map(
-                (item) => (
-                  <li key={item}>{item}</li>
-                )
-              )}
-            </ul>
-          </section>
-
-          <section className="panel rail-card">
-            <p className="eyebrow">Next move</p>
-            <h2 className="panel-title">Continue the session</h2>
-            <div className="jump-grid">
-              <button className="secondary-button" onClick={() => onNavigate("briefing")} type="button">
-                Back to briefing
-              </button>
-              <button className="secondary-button" onClick={() => onNavigate("interrogate")} type="button">
-                Ask about this map
-              </button>
-            </div>
-          </section>
-        </aside>
+        <div className="flex flex-wrap gap-2">
+          <div className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700">
+            <span className="text-gray-500 mr-2">Files:</span>
+            {summary?.file_count ?? 0}
+          </div>
+          <div className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700">
+            <span className="text-gray-500 mr-2">Modules:</span>
+            {summary?.major_modules.length ?? 0}
+          </div>
+        </div>
       </div>
-    </section>
+
+      <div className="flex-1 min-h-0 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+        <DiagramTabs diagrams={diagrams} loading={loading} />
+      </div>
+    </div>
   );
 }

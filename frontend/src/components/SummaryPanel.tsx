@@ -10,139 +10,134 @@ type SummaryPanelProps = {
 export function SummaryPanel({ summary, loading, warnings, indexMessage }: SummaryPanelProps) {
   const renderTokens = (items: string[], empty: string, limit = 8) => {
     if (!items.length) {
-      return <li>{empty}</li>;
+      return <li className="text-gray-500 italic text-sm py-2">{empty}</li>;
     }
 
     const visible = items.slice(0, limit);
     const remainder = items.length - visible.length;
 
     return (
-      <>
+      <div className="flex flex-wrap gap-2">
         {visible.map((item) => (
-          <li key={item}>{item}</li>
+          <span key={item} className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 border border-gray-200 text-sm font-medium text-gray-700">
+            {item}
+          </span>
         ))}
-        {remainder > 0 ? <li>+{remainder} more</li> : null}
-      </>
+        {remainder > 0 ? (
+          <span className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-50 border border-gray-200 text-sm font-medium text-gray-500">
+            +{remainder} more
+          </span>
+        ) : null}
+      </div>
     );
   };
 
   if (loading) {
     return (
-      <section className="panel summary-panel">
-        <p className="eyebrow">Repository summary</p>
-        <div className="placeholder-card">Scanning folders, symbols, and likely entry points...</div>
-      </section>
+      <div className="card p-8 flex flex-col items-center justify-center text-center space-y-4 h-64 border-dashed border-2 bg-gray-50/50">
+        <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <div className="text-gray-500 font-medium">Scanning folders, symbols, and entry points...</div>
+      </div>
     );
   }
 
   if (!summary) {
     return (
-      <section className="panel summary-panel">
-        <p className="eyebrow">Repository summary</p>
-        <div className="placeholder-card">
-          Load a repository to see framework detection, major modules, and important files.
-        </div>
-      </section>
+      <div className="card p-8 flex flex-col items-center justify-center text-center space-y-2 h-64 border-dashed border-2 bg-gray-50/50">
+        <div className="text-gray-500 font-medium">No repository data available</div>
+      </div>
     );
   }
 
   return (
-    <section className="panel summary-panel">
-      <div className="summary-header">
-        <div className="summary-identity">
-          <p className="eyebrow">Repository summary</p>
-          <h2 className="panel-title">{summary.repo_name}</h2>
-          <p className="summary-url">{summary.repo_url}</p>
-        </div>
-        <div className="summary-badges">
-          <div className="badge">{summary.detected_framework ?? "Framework pending"}</div>
-          <div className="badge muted">{summary.repo_id}</div>
-        </div>
-      </div>
-
-      {indexMessage ? <div className="status-banner subtle">{indexMessage}</div> : null}
-      {warnings.length ? (
-        <div className="warning-stack">
-          {warnings.map((warning) => (
-            <div key={warning} className="warning-card">
-              {warning}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="meta-strip">
-        <div className="meta-card">
-          <span>Loaded</span>
-          <strong>{new Date(summary.loaded_at).toLocaleString()}</strong>
-        </div>
-        <div className="meta-card">
-          <span>Top-level folders</span>
-          <strong>{summary.top_level_folders.length}</strong>
-        </div>
-        <div className="meta-card">
-          <span>Framework</span>
-          <strong>{summary.detected_framework ?? "Unknown"}</strong>
-        </div>
-      </div>
-
-      <div className="stats-grid summary-stats">
-        <article className="stat-card">
-          <span>Files</span>
-          <strong>{summary.file_count}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Classes</span>
-          <strong>{summary.total_classes}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Functions</span>
-          <strong>{summary.total_functions}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Indexed</span>
-          <strong>{summary.indexed_file_count}</strong>
-        </article>
-      </div>
-
-      <div className="summary-grid">
-        <div className="summary-section">
-          <h3>Major modules</h3>
-          <ul className="chip-list">{renderTokens(summary.major_modules, "Pending deeper analysis")}</ul>
+    <div className="space-y-6">
+      <div className="card p-6 md:p-8">
+        <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Repository Overview</p>
+            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{summary.repo_name}</h2>
+            <p className="text-sm text-gray-500 mt-1 font-mono">{summary.repo_url}</p>
+          </div>
+          <div className="flex flex-wrap gap-2 items-start h-min">
+            <span className="badge badge-blue text-sm px-3 py-1 shadow-sm">
+              {summary.detected_framework ?? "Framework pending"}
+            </span>
+            <span className="badge badge-gray text-xs font-mono px-3 py-1 shadow-sm border border-gray-200 bg-white">
+              {summary.repo_id}
+            </span>
+          </div>
         </div>
 
-        <div className="summary-section">
-          <h3>Entry points</h3>
-          <ul className="chip-list">{renderTokens(summary.entry_points, "Pending deeper analysis")}</ul>
+        {indexMessage && (
+          <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium">
+            {indexMessage}
+          </div>
+        )}
+        
+        {warnings.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {warnings.map((warning) => (
+              <div key={warning} className="p-3 rounded-lg bg-orange-50 border border-orange-100 text-orange-800 text-sm">
+                {warning}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+            <div className="text-sm font-medium text-gray-500 mb-1">Total Files</div>
+            <div className="text-2xl font-bold text-gray-900">{summary.file_count}</div>
+          </div>
+          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+            <div className="text-sm font-medium text-gray-500 mb-1">Classes</div>
+            <div className="text-2xl font-bold text-gray-900">{summary.total_classes}</div>
+          </div>
+          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+            <div className="text-sm font-medium text-gray-500 mb-1">Functions</div>
+            <div className="text-2xl font-bold text-gray-900">{summary.total_functions}</div>
+          </div>
+          <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+            <div className="text-sm font-medium text-blue-600 mb-1">Indexed</div>
+            <div className="text-2xl font-bold text-blue-900">{summary.indexed_file_count}</div>
+          </div>
         </div>
 
-        <div className="summary-section">
-          <h3>Important files</h3>
-          <ul className="chip-list">
+        <div className="grid md:grid-cols-2 gap-8">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Major Modules</h3>
+            {renderTokens(summary.major_modules, "Pending deeper analysis")}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Entry Points</h3>
+            {renderTokens(summary.entry_points, "Pending deeper analysis")}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Important Files</h3>
             {renderTokens(summary.important_files, "No standout files detected yet")}
-          </ul>
-        </div>
+          </div>
 
-        <div className="summary-section">
-          <h3>Languages</h3>
-          <ul className="chip-list">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Languages</h3>
             {Object.entries(summary.languages).length ? (
-              Object.entries(summary.languages).map(([language, count]) => (
-                <li key={language}>
-                  {language} ({count})
-                </li>
-              ))
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(summary.languages).map(([language, count]) => (
+                  <span key={language} className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 border border-gray-200 text-sm font-medium text-gray-700">
+                    {language} <span className="ml-2 text-gray-400">({count})</span>
+                  </span>
+                ))}
+              </div>
             ) : (
-              <li>No language breakdown available</li>
+              <div className="text-gray-500 italic text-sm py-2">No language breakdown available</div>
             )}
-          </ul>
-        </div>
-
-        <div className="summary-section">
-          <h3>Top-level folders</h3>
-          <ul className="chip-list">{renderTokens(summary.top_level_folders, "No top-level folders detected")}</ul>
+          </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

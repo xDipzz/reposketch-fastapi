@@ -26,9 +26,24 @@ export function InterrogateWorkspace({
   onNavigate
 }: InterrogateWorkspaceProps) {
   return (
-    <section className="workspace">
-      <div className="workspace-grid interrogate-grid">
-        <div className="workspace-main">
+    <div className="flex flex-col h-full max-w-[1600px] mx-auto gap-6">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shrink-0">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Interrogate Codebase</h2>
+          <p className="text-sm text-gray-500 mt-1">Ask architecture, routing, configuration, or flow questions.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {summary?.repo_name && (
+            <div className="px-3 py-1.5 bg-blue-50 border border-blue-100 text-blue-800 rounded-lg shadow-sm text-sm font-medium">
+              <span className="opacity-75 mr-2">Target:</span>
+              {summary.repo_name}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-6">
+        <div className="flex-1 min-h-0 flex flex-col">
           <AskPanel
             response={response}
             loading={loading}
@@ -39,44 +54,7 @@ export function InterrogateWorkspace({
             onAsk={onAsk}
           />
         </div>
-
-        <aside className="workspace-rail rail-stack">
-          <section className="panel rail-card">
-            <p className="eyebrow">Questioning mode</p>
-            <h2 className="panel-title">Ask with intent</h2>
-            <ul className="rail-list">
-              <li>Ask about routing, startup flow, config ownership, and module boundaries.</li>
-              <li>Prefer file-specific questions over broad “what is X?” prompts.</li>
-              <li>Use the evidence rail to verify where the answer came from.</li>
-            </ul>
-          </section>
-
-          <section className="panel rail-card">
-            <p className="eyebrow">Repository cues</p>
-            <h2 className="panel-title">{summary?.repo_name ?? "No repository loaded"}</h2>
-            <ul className="rail-list compact">
-              {summary?.major_modules.length ? (
-                summary.major_modules.map((moduleName) => <li key={moduleName}>{moduleName}</li>)
-              ) : (
-                <li>Load and index a repository to unlock grounded Q&amp;A.</li>
-              )}
-            </ul>
-          </section>
-
-          <section className="panel rail-card">
-            <p className="eyebrow">Switch context</p>
-            <h2 className="panel-title">Other workspaces</h2>
-            <div className="jump-grid">
-              <button className="secondary-button" onClick={() => onNavigate("briefing")} type="button">
-                View briefing
-              </button>
-              <button className="secondary-button" onClick={() => onNavigate("architecture")} type="button">
-                View architecture
-              </button>
-            </div>
-          </section>
-        </aside>
       </div>
-    </section>
+    </div>
   );
 }
