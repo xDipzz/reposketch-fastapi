@@ -57,9 +57,18 @@ class GraphBuilder:
             )
             selected_paths.update(ranked[:4])
 
+        root_level_files = sorted(
+            path_value for path_value in selected_paths if len(Path(path_value).parts) == 1
+        )
+        root_files_parent = root_node
+        if len(root_level_files) > 3:
+            root_files_parent = f"{root_node}/key-files"
+            graph.add_node(root_files_parent, label="key files", kind="folder")
+            graph.add_edge(root_node, root_files_parent)
+
         for relative_path in sorted(selected_paths):
             parts = Path(relative_path).parts
-            parent = root_node
+            parent = root_files_parent if len(parts) == 1 and root_files_parent != root_node else root_node
             built_parts: list[str] = []
             for index, part in enumerate(parts):
                 built_parts.append(part)
@@ -96,8 +105,20 @@ class GraphBuilder:
 
     def build_module_graph(self, metadata: RepoMetadata) -> nx.DiGraph:
         graph = nx.DiGraph()
-        for module in metadata.major_modules:
-            graph.add_node(module, label=module, kind="module")
+        repo_node = f"repo::{metadata.repo_name}"
+        graph.add_node(repo_node, label=f"{metadata.repo_name} repo", kind="repo")
+
+        module_counts: Counter[str] = Counter()
+        for file in metadata.files:
+            path = Path(file.path)
+            if len(path.parts) == 1 and file.extension != ".py":
+                continue
+            group_name = self._top_level_group(file.path)
+            if group_name:
+                module_counts[group_name] += 1
+
+        for module_name, _count in module_counts.most_common(8):
+            graph.add_node(module_name, label=module_name, kind="module")
 
         edge_weights: Counter[tuple[str, str]] = Counter()
         for edge in metadata.import_edges:
@@ -112,11 +133,19 @@ class GraphBuilder:
         for (source, target), weight in edge_weights.items():
             graph.add_edge(source, target, label=str(weight), weight=weight)
 
+        for node_name in list(graph.nodes):
+            if node_name == repo_node:
+                continue
+            if not graph.has_edge(repo_node, node_name):
+                graph.add_edge(repo_node, node_name, label="contains")
+
         return graph
 
     @staticmethod
     def _top_level_group(path_value: str) -> str:
         path = Path(path_value)
+        if len(path.parts) > 2 and path.parts[0] in {"src", "lib"}:
+            return path.parts[1]
         if len(path.parts) > 1:
             return path.parts[0]
         return path.stem

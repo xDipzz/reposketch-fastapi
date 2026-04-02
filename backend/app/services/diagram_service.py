@@ -15,7 +15,7 @@ class DiagramService:
                 id="project-structure",
                 title="Project structure",
                 description="Top-level folders and representative files extracted directly from the repository tree.",
-                mermaid=self._to_mermaid(graphs.structure, orientation="TD"),
+                mermaid=self._to_mermaid(graphs.structure, orientation="TB"),
             ),
             DiagramData(
                 id="file-dependencies",
@@ -27,7 +27,7 @@ class DiagramService:
                 id="module-relationships",
                 title="Module relationships",
                 description="High-level module and service relationships grouped by top-level package or folder.",
-                mermaid=self._to_mermaid(graphs.modules, orientation="LR"),
+                mermaid=self._to_mermaid(graphs.modules, orientation="TB"),
             ),
         ]
 
@@ -35,7 +35,10 @@ class DiagramService:
         if not graph.nodes:
             return 'flowchart TD\n    empty["No repository structure detected"]'
 
-        lines = [f"flowchart {orientation}"]
+        lines = [
+            "%%{init: {'flowchart': {'rankSpacing': 78, 'nodeSpacing': 38, 'curve': 'basis'}}}%%",
+            f"flowchart {orientation}",
+        ]
         style_buckets: dict[str, list[str]] = {"repo": [], "folder": [], "file": [], "module": []}
 
         for node, attrs in graph.nodes(data=True):
@@ -49,7 +52,7 @@ class DiagramService:
             source_id = self._node_id(source)
             target_id = self._node_id(target)
             edge_label = attrs.get("label")
-            if edge_label and graph.number_of_edges() <= 18:
+            if edge_label and edge_label != "contains" and graph.number_of_edges() <= 18:
                 label = self._escape_label(str(edge_label))
                 lines.append(f'    {source_id} -- "{label}" --> {target_id}')
             else:

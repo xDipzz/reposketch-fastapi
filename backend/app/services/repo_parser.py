@@ -48,6 +48,8 @@ FRAMEWORK_IMPORT_HINTS = {
     "Click": {"click"},
 }
 
+SOURCE_LAYOUT_FOLDERS = {"src", "lib"}
+
 
 class PythonMetadataVisitor(ast.NodeVisitor):
     def __init__(self) -> None:
@@ -273,11 +275,13 @@ class RepoParser:
         return scores.most_common(1)[0][0]
 
     def _build_import_edges(self, files: list[FileAnalysis]) -> list[ImportEdge]:
-        module_map = {
-            file.module_name: file.path
-            for file in files
-            if file.module_name and file.extension == ".py"
-        }
+        module_map: dict[str, str] = {}
+        for file in files:
+            if not file.module_name or file.extension != ".py":
+                continue
+            for alias in self._module_aliases(file):
+                module_map.setdefault(alias, file.path)
+
         edges: dict[tuple[str, str, str], ImportEdge] = {}
 
         for file in files:
@@ -292,6 +296,19 @@ class RepoParser:
                         edges[key] = ImportEdge(source=file.path, target=target_path, module=candidate)
 
         return sorted(edges.values(), key=lambda edge: (edge.source, edge.target, edge.module))
+
+    @staticmethod
+    def _module_aliases(file: FileAnalysis) -> list[str]:
+        aliases: set[str] = {file.module_name} if file.module_name else set()
+        path = Path(file.path)
+        parts = list(path.with_suffix("").parts)
+        if parts and parts[-1] == "__init__":
+            parts = parts[:-1]
+
+        if parts and parts[0] in SOURCE_LAYOUT_FOLDERS and len(parts) > 1:
+            aliases.add(".".join(parts[1:]))
+
+        return sorted(alias for alias in aliases if alias)
 
     def _resolve_import_candidates(
         self, current_module: str, import_statement: ImportStatement
