@@ -224,7 +224,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 relative">
+        <main className="relative flex-1 overflow-auto p-6 lg:p-8">
           {error ? (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl shadow-sm">
               <div className="flex items-start gap-3">

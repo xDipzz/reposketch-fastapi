@@ -47,13 +47,13 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex w-full flex-col">
       <div className="border-b border-gray-200 bg-slate-50/80 px-4 py-4 md:px-6">
         <div className="mb-3 flex items-center justify-between gap-4">
           <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-gray-500">
             Views ({diagrams.length})
           </h3>
-          <p className="hidden text-xs text-gray-500 lg:block">Choose a view, then zoom and scroll inside the canvas.</p>
+          <p className="hidden text-xs text-gray-500 lg:block">Choose a view. The page will expand with the diagram.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {diagrams.map((diagram, index) => {
@@ -83,14 +83,14 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col bg-white">
+      <div className="flex flex-col bg-white">
         {activeDiagram ? (
           <>
             <div className="shrink-0 border-b border-gray-200 px-6 py-5">
               <h3 className="text-xl font-bold text-gray-900">{activeDiagram.title}</h3>
               <p className="mt-2 max-w-4xl text-sm leading-relaxed text-gray-600">{activeDiagram.description}</p>
             </div>
-            <div className="min-h-[42rem] flex-1 overflow-hidden bg-slate-50 px-4 py-4 md:px-6 md:py-6 xl:min-h-[48rem]">
+            <div className="bg-slate-50 px-4 py-4 md:px-6 md:py-6">
               <MermaidViewer chart={activeDiagram.mermaid} />
             </div>
           </>

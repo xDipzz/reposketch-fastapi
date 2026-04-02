@@ -15,28 +15,53 @@ class DiagramService:
                 id="project-structure",
                 title="Project structure",
                 description="Top-level folders and representative files extracted directly from the repository tree.",
-                mermaid=self._to_mermaid(graphs.structure, orientation="TB"),
+                mermaid=self._to_mermaid(
+                    graphs.structure,
+                    orientation="TB",
+                    rank_spacing=110,
+                    node_spacing=22,
+                    show_edge_labels=True,
+                ),
             ),
             DiagramData(
                 id="file-dependencies",
                 title="File dependencies",
                 description="Internal Python import relationships resolved from parsed AST import statements.",
-                mermaid=self._to_mermaid(graphs.dependencies, orientation="LR"),
+                mermaid=self._to_mermaid(
+                    graphs.dependencies,
+                    orientation="TB",
+                    rank_spacing=92,
+                    node_spacing=28,
+                    show_edge_labels=False,
+                ),
             ),
             DiagramData(
                 id="module-relationships",
                 title="Module relationships",
                 description="High-level module and service relationships grouped by top-level package or folder.",
-                mermaid=self._to_mermaid(graphs.modules, orientation="TB"),
+                mermaid=self._to_mermaid(
+                    graphs.modules,
+                    orientation="TB",
+                    rank_spacing=96,
+                    node_spacing=36,
+                    show_edge_labels=True,
+                ),
             ),
         ]
 
-    def _to_mermaid(self, graph: nx.DiGraph, orientation: str) -> str:
+    def _to_mermaid(
+        self,
+        graph: nx.DiGraph,
+        orientation: str,
+        rank_spacing: int,
+        node_spacing: int,
+        show_edge_labels: bool,
+    ) -> str:
         if not graph.nodes:
             return 'flowchart TD\n    empty["No repository structure detected"]'
 
         lines = [
-            "%%{init: {'flowchart': {'rankSpacing': 78, 'nodeSpacing': 38, 'curve': 'basis'}}}%%",
+            f"%%{{init: {{'flowchart': {{'rankSpacing': {rank_spacing}, 'nodeSpacing': {node_spacing}, 'curve': 'basis'}}}}}}%%",
             f"flowchart {orientation}",
         ]
         style_buckets: dict[str, list[str]] = {"repo": [], "folder": [], "file": [], "module": []}
@@ -52,7 +77,12 @@ class DiagramService:
             source_id = self._node_id(source)
             target_id = self._node_id(target)
             edge_label = attrs.get("label")
-            if edge_label and edge_label != "contains" and graph.number_of_edges() <= 18:
+            if (
+                show_edge_labels
+                and edge_label
+                and edge_label != "contains"
+                and graph.number_of_edges() <= 18
+            ):
                 label = self._escape_label(str(edge_label))
                 lines.append(f'    {source_id} -- "{label}" --> {target_id}')
             else:

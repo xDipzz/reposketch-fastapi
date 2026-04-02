@@ -7,8 +7,10 @@ type MermaidViewerProps = {
 export function MermaidViewer({ chart }: MermaidViewerProps) {
   const [svg, setSvg] = useState("");
   const [error, setError] = useState("");
-  const [zoom, setZoom] = useState(1.1);
+  const [zoom, setZoom] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const elementId = useId();
+  const viewerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -48,24 +50,67 @@ export function MermaidViewer({ chart }: MermaidViewerProps) {
   }, [chart, elementId]);
 
   useEffect(() => {
-    setZoom(1.1);
+    setZoom(1);
   }, [chart]);
 
   useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === viewerRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
     const svgElement = containerRef.current?.querySelector("svg");
-    if (!svgElement) {
+    if (!(svgElement instanceof SVGSVGElement)) {
       return;
     }
 
-    svgElement.style.width = `${Math.max(zoom * 100, 100)}%`;
-    svgElement.style.height = "auto";
+    const viewBox = svgElement.viewBox.baseVal;
+    const baseWidth =
+      viewBox?.width ||
+      safeNumber(svgElement.getAttribute("width")) ||
+      svgElement.getBoundingClientRect().width ||
+      1200;
+    const baseHeight =
+      viewBox?.height ||
+      safeNumber(svgElement.getAttribute("height")) ||
+      svgElement.getBoundingClientRect().height ||
+      720;
+    const parentWidth = containerRef.current?.parentElement?.clientWidth ?? baseWidth;
+    const scaledWidth = Math.max(baseWidth * zoom, parentWidth - 24);
+    const scaledHeight = baseHeight * zoom;
+
+    svgElement.style.width = `${Math.round(scaledWidth)}px`;
+    svgElement.style.height = `${Math.round(scaledHeight)}px`;
     svgElement.style.maxWidth = "none";
     svgElement.style.display = "block";
-  }, [svg, zoom]);
+  }, [svg, zoom, isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+
+    try {
+      if (document.fullscreenElement === viewer) {
+        await document.exitFullscreen();
+        return;
+      }
+      await viewer.requestFullscreen();
+    } catch {
+      // Ignore browser-specific fullscreen errors and keep the viewer usable.
+    }
+  };
 
   if (error) {
     return (
-      <div className="flex h-full min-h-[34rem] items-center justify-center rounded-[28px] border border-red-200 bg-red-50 p-8 text-red-600">
+      <div className="flex min-h-[34rem] items-center justify-center rounded-[28px] border border-red-200 bg-red-50 p-8 text-red-600">
         <div className="text-center">
           <svg className="mx-auto mb-3 h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -83,7 +128,7 @@ export function MermaidViewer({ chart }: MermaidViewerProps) {
 
   if (!svg) {
     return (
-      <div className="flex h-full min-h-[34rem] items-center justify-center rounded-[28px] border border-slate-200 bg-slate-50/80 backdrop-blur-sm">
+      <div className="flex min-h-[34rem] items-center justify-center rounded-[28px] border border-slate-200 bg-slate-50/80 backdrop-blur-sm">
         <div className="flex flex-col items-center">
           <svg className="mb-4 h-8 w-8 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -95,38 +140,41 @@ export function MermaidViewer({ chart }: MermaidViewerProps) {
     );
   }
 
+  const shellClasses = [
+    "border border-slate-200 bg-slate-100/80 shadow-inner",
+    isFullscreen
+      ? "h-screen w-full overflow-auto rounded-none bg-slate-100"
+      : "w-max min-w-full rounded-[28px] overflow-visible"
+  ].join(" ");
+
   return (
-    <div className="flex h-full min-h-[34rem] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100/80">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white/85 px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-slate-500">
-          Scroll to inspect the full diagram
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            className="btn-secondary px-3 py-1.5 text-xs"
-            onClick={() => setZoom((current) => Math.max(0.7, Number((current - 0.15).toFixed(2))))}
-            type="button"
-          >
-            -
-          </button>
-          <button className="btn-secondary min-w-[4.75rem] px-3 py-1.5 text-xs font-mono" onClick={() => setZoom(1.1)} type="button">
-            {Math.round(zoom * 100)}%
-          </button>
-          <button
-            className="btn-secondary px-3 py-1.5 text-xs"
-            onClick={() => setZoom((current) => Math.min(2.2, Number((current + 0.15).toFixed(2))))}
-            type="button"
-          >
-            +
-          </button>
-        </div>
+    <div ref={viewerRef} className={shellClasses}>
+      <div className={`flex items-center justify-end gap-2 border-b border-slate-200 bg-white/90 px-4 py-3 ${isFullscreen ? "sticky top-0 z-20 backdrop-blur" : ""}`}>
+        <button
+          className="btn-secondary px-3 py-1.5 text-xs"
+          onClick={() => setZoom((current) => Math.max(0.7, Number((current - 0.15).toFixed(2))))}
+          type="button"
+        >
+          -
+        </button>
+        <button className="btn-secondary min-w-[4.75rem] px-3 py-1.5 text-xs font-mono" onClick={() => setZoom(1)} type="button">
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          className="btn-secondary px-3 py-1.5 text-xs"
+          onClick={() => setZoom((current) => Math.min(2.2, Number((current + 0.15).toFixed(2))))}
+          type="button"
+        >
+          +
+        </button>
+        <button className="btn-secondary px-3 py-1.5 text-xs" onClick={toggleFullscreen} type="button">
+          {isFullscreen ? "Exit full screen" : "Full screen"}
+        </button>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <div className="min-h-full min-w-full p-4 md:p-6 xl:p-8">
-          <div className="inline-block min-h-full min-w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-6 xl:p-8">
-            <div ref={containerRef} dangerouslySetInnerHTML={{ __html: svg }} />
-          </div>
+      <div className={isFullscreen ? "overflow-auto px-4 py-4 md:px-6 xl:px-8" : "px-4 py-4 md:px-6 xl:px-8"}>
+        <div className="w-max min-w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-6 xl:p-8">
+          <div ref={containerRef} className="w-max min-w-full" dangerouslySetInnerHTML={{ __html: svg }} />
         </div>
       </div>
     </div>
@@ -155,4 +203,13 @@ function normalizeRenderedSvg(renderedSvg: string) {
   } catch {
     return renderedSvg;
   }
+}
+
+function safeNumber(value: string | null) {
+  if (!value) {
+    return 0;
+  }
+
+  const numericValue = Number.parseFloat(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
 }

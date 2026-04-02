@@ -18,6 +18,12 @@ class GraphBundle:
 
 
 class GraphBuilder:
+    MAX_STRUCTURE_REPRESENTATIVES_PER_FOLDER = 3
+    MAX_DEPENDENCY_NODES = 14
+    MAX_DEPENDENCY_EDGES = 18
+    SOURCE_LAYOUT_FOLDERS = {"src", "lib"}
+    BOUNDARY_FOLDERS = {"tests", "examples"}
+
     def build(self, metadata: RepoMetadata) -> GraphBundle:
         return GraphBundle(
             structure=self.build_structure_graph(metadata),
@@ -40,8 +46,6 @@ class GraphBuilder:
         for file in metadata.files:
             if len(Path(file.path).parts) == 1:
                 selected_paths.add(file.path)
-            if file.is_entry_point or file.is_important:
-                selected_paths.add(file.path)
 
         for folder_name, items in grouped.items():
             if folder_name == "__root__":
@@ -55,7 +59,7 @@ class GraphBuilder:
                     item,
                 ),
             )
-            selected_paths.update(ranked[:4])
+            selected_paths.update(ranked[: self.MAX_STRUCTURE_REPRESENTATIVES_PER_FOLDER])
 
         root_level_files = sorted(
             path_value for path_value in selected_paths if len(Path(path_value).parts) == 1
@@ -89,18 +93,32 @@ class GraphBuilder:
         for edge in metadata.import_edges:
             graph.add_edge(edge.source, edge.target, label=edge.module)
 
-        if len(graph.nodes) <= 24:
+        if (
+            len(graph.nodes) <= self.MAX_DEPENDENCY_NODES
+            and len(graph.edges) <= self.MAX_DEPENDENCY_EDGES
+        ):
             return graph
 
-        keep_nodes = set(metadata.entry_points)
-        keep_nodes.update(edge.source for edge in metadata.import_edges[:8])
-        keep_nodes.update(edge.target for edge in metadata.import_edges[:8])
-        degree_ranked = [
-            node
-            for node, _degree in sorted(graph.degree, key=lambda item: item[1], reverse=True)
+        keep_nodes = self._select_dependency_nodes(graph, metadata)
+        trimmed = graph.subgraph(keep_nodes).copy()
+
+        if len(trimmed.edges) > self.MAX_DEPENDENCY_EDGES:
+            ranked_edges = sorted(
+                trimmed.edges(),
+                key=lambda edge: self._dependency_edge_priority(trimmed, edge),
+                reverse=True,
+            )
+            keep_edges = ranked_edges[: self.MAX_DEPENDENCY_EDGES]
+            trimmed = self._trim_dependency_edges(trimmed, keep_edges, metadata)
+
+        isolated_nodes = [
+            node_name
+            for node_name in list(trimmed.nodes)
+            if trimmed.degree(node_name) == 0 and node_name not in metadata.entry_points
         ]
-        keep_nodes.update(degree_ranked[:24])
-        trimmed = graph.subgraph([node for node in keep_nodes if node in graph]).copy()
+        for node_name in isolated_nodes:
+            trimmed.remove_node(node_name)
+
         return trimmed
 
     def build_module_graph(self, metadata: RepoMetadata) -> nx.DiGraph:
@@ -144,8 +162,103 @@ class GraphBuilder:
     @staticmethod
     def _top_level_group(path_value: str) -> str:
         path = Path(path_value)
-        if len(path.parts) > 2 and path.parts[0] in {"src", "lib"}:
+        if len(path.parts) > 2 and path.parts[0] in GraphBuilder.SOURCE_LAYOUT_FOLDERS:
             return path.parts[1]
         if len(path.parts) > 1:
             return path.parts[0]
         return path.stem
+
+    def _select_dependency_nodes(
+        self, graph: nx.DiGraph, metadata: RepoMetadata
+    ) -> list[str]:
+        entry_points = [node_name for node_name in metadata.entry_points if node_name in graph]
+        source_nodes = [
+            node_name
+            for node_name in graph.nodes
+            if self._path_category(node_name) == "source" and node_name not in entry_points
+        ]
+        boundary_nodes = [
+            node_name
+            for node_name in graph.nodes
+            if self._path_category(node_name) == "boundary" and node_name not in entry_points
+        ]
+        other_nodes = [
+            node_name
+            for node_name in graph.nodes
+            if self._path_category(node_name) == "other" and node_name not in entry_points
+        ]
+
+        source_nodes.sort(key=lambda node_name: self._dependency_node_priority(graph, node_name), reverse=True)
+        boundary_nodes.sort(key=lambda node_name: self._dependency_node_priority(graph, node_name), reverse=True)
+        other_nodes.sort(key=lambda node_name: self._dependency_node_priority(graph, node_name), reverse=True)
+
+        ordered = [
+            *entry_points,
+            *source_nodes[:10],
+            *boundary_nodes[:6],
+            *source_nodes[10:],
+            *boundary_nodes[6:],
+            *other_nodes,
+        ]
+
+        unique_nodes: list[str] = []
+        seen: set[str] = set()
+        for node_name in ordered:
+            if node_name in seen:
+                continue
+            seen.add(node_name)
+            unique_nodes.append(node_name)
+            if len(unique_nodes) >= self.MAX_DEPENDENCY_NODES:
+                break
+
+        return unique_nodes
+
+    @staticmethod
+    def _dependency_node_priority(graph: nx.DiGraph, node_name: str) -> tuple[int, int, int, str]:
+        return (
+            graph.degree(node_name),
+            graph.in_degree(node_name),
+            graph.out_degree(node_name),
+            node_name,
+        )
+
+    def _dependency_edge_priority(
+        self, graph: nx.DiGraph, edge: tuple[str, str]
+    ) -> tuple[int, int, int, str, str]:
+        source, target = edge
+        has_boundary_file = int(
+            self._path_category(source) == "boundary" or self._path_category(target) == "boundary"
+        )
+        return (
+            has_boundary_file,
+            graph.degree(source) + graph.degree(target),
+            graph.out_degree(source) + graph.in_degree(target),
+            source,
+            target,
+        )
+
+    def _trim_dependency_edges(
+        self,
+        graph: nx.DiGraph,
+        keep_edges: list[tuple[str, str]],
+        metadata: RepoMetadata,
+    ) -> nx.DiGraph:
+        trimmed = nx.DiGraph()
+        for source, target in keep_edges:
+            trimmed.add_node(source, **graph.nodes[source])
+            trimmed.add_node(target, **graph.nodes[target])
+            trimmed.add_edge(source, target, **graph.edges[source, target])
+
+        for node_name in metadata.entry_points:
+            if node_name in graph and node_name not in trimmed:
+                trimmed.add_node(node_name, **graph.nodes[node_name])
+
+        return trimmed
+
+    def _path_category(self, path_value: str) -> str:
+        path = Path(path_value)
+        if path.parts and path.parts[0] in self.SOURCE_LAYOUT_FOLDERS:
+            return "source"
+        if path.parts and path.parts[0] in self.BOUNDARY_FOLDERS:
+            return "boundary"
+        return "other"

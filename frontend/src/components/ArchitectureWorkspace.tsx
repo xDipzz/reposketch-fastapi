@@ -16,7 +16,7 @@ export function ArchitectureWorkspace({
   onNavigate
 }: ArchitectureWorkspaceProps) {
   return (
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="mx-auto flex w-full flex-col gap-6">
       <div className="flex shrink-0 flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-gray-900">Architecture Map</h2>
@@ -34,7 +34,7 @@ export function ArchitectureWorkspace({
         </div>
       </div>
 
-      <div className="flex min-h-[48rem] flex-1 flex-col overflow-hidden rounded-[28px] border border-gray-200 bg-white shadow-sm">
+      <div className="flex flex-col rounded-[28px] border border-gray-200 bg-white shadow-sm">
         <DiagramTabs diagrams={diagrams} loading={loading} />
       </div>
     </div>
