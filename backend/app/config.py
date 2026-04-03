@@ -65,6 +65,17 @@ class Settings(BaseModel):
             if part.strip()
         )
     )
+    index_excluded_directories: tuple[str, ...] = Field(
+        default=tuple(
+            part.strip().lower()
+            for part in os.getenv(
+                "INDEX_EXCLUDED_DIRECTORIES",
+                ".git,.github,node_modules,dist,build,.venv,venv,__pycache__,docs,docs_src,tests,test,testing,examples,example,benchmarks,benchmark",
+            ).split(",")
+            if part.strip()
+        )
+    )
+    max_index_chunks: int = Field(default=int(os.getenv("MAX_INDEX_CHUNKS", "2500")))
     openai_api_key: str | None = Field(default=os.getenv("OPENAI_API_KEY"))
     chat_model: str = Field(default=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"))
     embedding_model: str = Field(

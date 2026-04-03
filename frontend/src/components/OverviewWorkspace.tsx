@@ -57,6 +57,7 @@ export function OverviewWorkspace({
           loading={loading}
           warnings={warnings}
           indexMessage={indexMessage}
+          indexStatus={indexStatus}
         />
       </div>
       <div className="w-full lg:w-80 flex flex-col gap-6 shrink-0">

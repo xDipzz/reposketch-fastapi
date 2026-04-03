@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: reposketch-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: APP_ENV
+        value: production
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: REPO_STORAGE_DIR
+        value: /tmp/reposketch/repos
+      - key: ANALYSIS_STORAGE_DIR
+        value: /tmp/reposketch/analysis
+      - key: CHROMA_PERSIST_DIR
+        value: /tmp/reposketch/chroma
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_CHAT_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_EMBEDDING_MODEL
+        value: text-embedding-3-small

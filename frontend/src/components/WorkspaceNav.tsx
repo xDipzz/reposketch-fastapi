@@ -67,7 +67,7 @@ export function WorkspaceNav({ activeView, indexStatus, onChange }: WorkspaceNav
               {indexStatus === "idle" && "Awaiting Index"}
               {indexStatus === "indexing" && "Indexing..."}
               {indexStatus === "ready" && "Ready for Q&A"}
-              {indexStatus === "error" && "Index Blocked"}
+              {indexStatus === "error" && "Index Failed"}
             </span>
           </div>
         </div>

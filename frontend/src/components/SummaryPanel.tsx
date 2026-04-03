@@ -5,9 +5,21 @@ type SummaryPanelProps = {
   loading: boolean;
   warnings: string[];
   indexMessage: string | null;
+  indexStatus: "idle" | "indexing" | "ready" | "error";
 };
 
-export function SummaryPanel({ summary, loading, warnings, indexMessage }: SummaryPanelProps) {
+export function SummaryPanel({ summary, loading, warnings, indexMessage, indexStatus }: SummaryPanelProps) {
+  const indexMessageClasses =
+    indexStatus === "error"
+      ? "bg-red-50 border-red-100 text-red-800"
+      : indexStatus === "ready"
+        ? "bg-emerald-50 border-emerald-100 text-emerald-800"
+        : indexStatus === "indexing"
+          ? "bg-amber-50 border-amber-100 text-amber-800"
+          : "bg-blue-50 border-blue-100 text-blue-800";
+
+  const indexMetricLabel = indexStatus === "ready" ? "Indexed" : "Indexable";
+
   const renderTokens = (items: string[], empty: string, limit = 8) => {
     if (!items.length) {
       return <li className="text-gray-500 italic text-sm py-2">{empty}</li>;
@@ -72,7 +84,7 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage }: Summa
         </div>
 
         {indexMessage && (
-          <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 text-sm font-medium">
+          <div className={`mb-6 rounded-xl border p-4 text-sm font-medium ${indexMessageClasses}`}>
             {indexMessage}
           </div>
         )}
@@ -101,7 +113,7 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage }: Summa
             <div className="text-2xl font-bold text-gray-900">{summary.total_functions}</div>
           </div>
           <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-            <div className="text-sm font-medium text-blue-600 mb-1">Indexed</div>
+            <div className="text-sm font-medium text-blue-600 mb-1">{indexMetricLabel}</div>
             <div className="text-2xl font-bold text-blue-900">{summary.indexed_file_count}</div>
           </div>
         </div>

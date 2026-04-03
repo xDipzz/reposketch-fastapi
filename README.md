@@ -41,6 +41,8 @@ cp .env.example .env
 
 `OPENAI_API_KEY` must be present in `backend/.env` before using `POST /analyze/index` or `POST /ask`.
 
+By default, indexing focuses on source files and skips heavy low-signal folders such as `docs`, `docs_src`, and `tests`. You can tune this with `INDEX_EXCLUDED_DIRECTORIES` and `MAX_INDEX_CHUNKS` in `backend/.env`.
+
 4. Run the API:
 
 ```bash

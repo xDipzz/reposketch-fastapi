@@ -1,6 +1,45 @@
 import axios from "axios";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+function isLoopbackHost(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+function isLoopbackBaseUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return isLoopbackHost(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function resolveApiBaseUrl() {
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+  if (typeof window !== "undefined") {
+    const { hostname } = window.location;
+    const runningLocally = isLoopbackHost(hostname);
+
+    if (configuredBaseUrl) {
+      // Ignore loopback-only URLs in deployed environments.
+      if (!runningLocally && isLoopbackBaseUrl(configuredBaseUrl)) {
+        return "/api";
+      }
+      return configuredBaseUrl;
+    }
+
+    if (runningLocally) {
+      return "http://localhost:8000";
+    }
+  }
+
+  // Use Vercel's same-origin rewrite in deployed environments.
+  return configuredBaseUrl || "/api";
+}
+
+const apiBaseUrl = resolveApiBaseUrl();
+const REPOSITORY_LOAD_TIMEOUT_MS = 120_000;
+const REPOSITORY_INDEX_TIMEOUT_MS = 300_000;
 
 export const apiClient = axios.create({
   baseURL: apiBaseUrl,
@@ -74,7 +113,11 @@ export type AskResponse = {
 };
 
 export async function loadRepository(repoUrl: string) {
-  const { data } = await apiClient.post("/analyze/repo-load", { repo_url: repoUrl });
+  const { data } = await apiClient.post(
+    "/analyze/repo-load",
+    { repo_url: repoUrl },
+    { timeout: REPOSITORY_LOAD_TIMEOUT_MS }
+  );
   return data as RepoLoadResponse;
 }
 
@@ -93,10 +136,14 @@ export async function fetchDiagrams(repoId: string) {
 }
 
 export async function indexRepository(repoId: string) {
-  const { data } = await apiClient.post("/analyze/index", {
-    repo_id: repoId,
-    force_reindex: true
-  });
+  const { data } = await apiClient.post(
+    "/analyze/index",
+    {
+      repo_id: repoId,
+      force_reindex: true
+    },
+    { timeout: REPOSITORY_INDEX_TIMEOUT_MS }
+  );
   return data as IndexResponse;
 }
 

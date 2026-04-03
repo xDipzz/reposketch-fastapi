@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import type { Diagram } from "../api/client";
 import { MermaidViewer } from "./MermaidViewer";
 
+const FIT_WIDTH_DIAGRAM_IDS = new Set(["project-structure", "file-dependencies"]);
+
 type DiagramTabsProps = {
   diagrams: Diagram[];
   loading: boolean;
@@ -12,7 +14,7 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
   const [activeId, setActiveId] = useState<string | null>(diagrams[0]?.id ?? null);
   const activeDiagram = diagrams.find((diagram) => diagram.id === activeId) ?? diagrams[0] ?? null;
   const layoutMode =
-    activeDiagram?.id === "project-structure" ? "fit-width" : "natural";
+    activeDiagram && FIT_WIDTH_DIAGRAM_IDS.has(activeDiagram.id) ? "fit-width" : "natural";
 
   useEffect(() => {
     setActiveId(diagrams[0]?.id ?? null);
@@ -57,7 +59,7 @@ export function DiagramTabs({ diagrams, loading }: DiagramTabsProps) {
           </h3>
           <p className="hidden text-xs text-gray-500 lg:block">
             {layoutMode === "fit-width"
-              ? "Project structure is fitted to the stage."
+              ? "This diagram is fitted to the stage."
               : "Use zoom or full screen for dense diagrams."}
           </p>
         </div>

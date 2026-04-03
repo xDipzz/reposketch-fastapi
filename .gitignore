@@ -14,5 +14,7 @@ frontend/dist/
 frontend/*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
+.vercel/
+info/
 config.toml.codex.bak
 config.toml.codex.work

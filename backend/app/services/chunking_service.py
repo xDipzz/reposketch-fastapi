@@ -12,13 +12,16 @@ from app.utils.file_utils import read_text_file
 class ChunkingService:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
+        self.excluded_directories = {
+            item.lower() for item in self.settings.index_excluded_directories if item.strip()
+        }
 
     def chunk_repository(self, metadata: RepoMetadata) -> list[Document]:
         repo_root = Path(metadata.local_path)
         documents: list[Document] = []
 
-        for file in metadata.files:
-            if file.extension not in self.settings.indexable_extensions:
+        for file in sorted(metadata.files, key=self._index_priority):
+            if self._should_skip_indexing(file):
                 continue
 
             file_path = repo_root / file.path
@@ -30,11 +33,47 @@ class ChunkingService:
                 continue
 
             if file.extension == ".py":
-                documents.extend(self._chunk_python_file(metadata, file, content))
+                next_documents = self._chunk_python_file(metadata, file, content)
             else:
-                documents.extend(self._chunk_text_file(metadata, file, content))
+                next_documents = self._chunk_text_file(metadata, file, content)
+
+            if not next_documents:
+                continue
+
+            remaining = self.settings.max_index_chunks - len(documents)
+            if remaining <= 0:
+                break
+
+            if len(next_documents) > remaining:
+                documents.extend(next_documents[:remaining])
+                break
+
+            documents.extend(next_documents)
 
         return documents
+
+    def _should_skip_indexing(self, file: FileAnalysis) -> bool:
+        if file.extension not in self.settings.indexable_extensions:
+            return True
+
+        path = Path(file.path)
+        parent_directories = (part.lower() for part in path.parts[:-1])
+        return any(part in self.excluded_directories for part in parent_directories)
+
+    def _index_priority(self, file: FileAnalysis) -> tuple[int, int, int, int, str]:
+        path = Path(file.path)
+        is_python = file.extension == ".py"
+        is_root_level = len(path.parts) == 1
+        top_level_folder = path.parts[0].lower() if len(path.parts) > 1 else ""
+        is_source_package = is_python and top_level_folder not in self.excluded_directories
+
+        return (
+            0 if is_source_package else 1,
+            0 if file.is_entry_point else 1,
+            0 if file.is_important else 1,
+            0 if is_root_level else 1,
+            file.path,
+        )
 
     def _chunk_python_file(
         self, metadata: RepoMetadata, file: FileAnalysis, content: str
