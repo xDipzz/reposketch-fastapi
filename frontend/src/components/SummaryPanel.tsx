@@ -11,18 +11,18 @@ type SummaryPanelProps = {
 export function SummaryPanel({ summary, loading, warnings, indexMessage, indexStatus }: SummaryPanelProps) {
   const indexMessageClasses =
     indexStatus === "error"
-      ? "bg-red-50 border-red-100 text-red-800"
+      ? "bg-red-400/10 border-red-400/20 text-red-200"
       : indexStatus === "ready"
-        ? "bg-emerald-50 border-emerald-100 text-emerald-800"
+        ? "bg-emerald-400/10 border-emerald-400/20 text-emerald-200"
         : indexStatus === "indexing"
-          ? "bg-amber-50 border-amber-100 text-amber-800"
-          : "bg-blue-50 border-blue-100 text-blue-800";
+          ? "bg-amber-400/10 border-amber-400/20 text-amber-200"
+          : "bg-white/[0.055] border-white/10 text-slate-300";
 
   const indexMetricLabel = indexStatus === "ready" ? "Indexed" : "Indexable";
 
   const renderTokens = (items: string[], empty: string, limit = 8) => {
     if (!items.length) {
-      return <li className="text-gray-500 italic text-sm py-2">{empty}</li>;
+      return <div className="py-2 text-sm italic text-slate-600">{empty}</div>;
     }
 
     const visible = items.slice(0, limit);
@@ -31,12 +31,12 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage, indexSt
     return (
       <div className="flex flex-wrap gap-2">
         {visible.map((item) => (
-          <span key={item} className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 border border-gray-200 text-sm font-medium text-gray-700">
+          <span key={item} className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 font-mono text-xs font-medium text-slate-300">
             {item}
           </span>
         ))}
         {remainder > 0 ? (
-          <span className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-50 border border-gray-200 text-sm font-medium text-gray-500">
+          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.035] px-3 py-1 text-xs font-semibold text-slate-500">
             +{remainder} more
           </span>
         ) : null}
@@ -46,110 +46,110 @@ export function SummaryPanel({ summary, loading, warnings, indexMessage, indexSt
 
   if (loading) {
     return (
-      <div className="card p-8 flex flex-col items-center justify-center text-center space-y-4 h-64 border-dashed border-2 bg-gray-50/50">
-        <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <div className="text-gray-500 font-medium">Scanning folders, symbols, and entry points...</div>
+      <div className="premium-panel flex h-72 flex-col justify-center p-8">
+        <div className="mb-5 h-2 w-24 rounded-full bg-white signal-pulse" />
+        <div className="space-y-3">
+          <div className="h-4 w-2/3 rounded-full bg-white/10" />
+          <div className="h-4 w-1/2 rounded-full bg-white/10" />
+          <div className="h-20 rounded-2xl border border-white/10 bg-white/[0.045]" />
+        </div>
+        <div className="mt-5 text-sm font-semibold text-slate-500">Scanning folders, symbols, and entry points...</div>
       </div>
     );
   }
 
   if (!summary) {
     return (
-      <div className="card p-8 flex flex-col items-center justify-center text-center space-y-2 h-64 border-dashed border-2 bg-gray-50/50">
-        <div className="text-gray-500 font-medium">No repository data available</div>
+      <div className="premium-panel flex h-64 flex-col items-center justify-center p-8 text-center">
+        <div className="text-sm font-semibold text-slate-500">No repository data available</div>
       </div>
     );
   }
 
+  const metrics = [
+    { label: "Files", value: summary.file_count },
+    { label: "Classes", value: summary.total_classes },
+    { label: "Functions", value: summary.total_functions },
+    { label: indexMetricLabel, value: summary.indexed_file_count }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="card p-6 md:p-8">
-        <div className="flex flex-col md:flex-row justify-between gap-6 mb-8">
+    <div className="space-y-5">
+      <section className="premium-panel relative overflow-hidden p-6 md:p-8">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/20" />
+        <div className="mb-8 flex flex-col justify-between gap-6 md:flex-row">
           <div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Repository Overview</p>
-            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{summary.repo_name}</h2>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{summary.repo_url}</p>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">Repository Briefing</p>
+            <h2 className="text-4xl font-extrabold tracking-normal text-white">{summary.repo_name}</h2>
+            <p className="mt-2 max-w-3xl truncate font-mono text-sm text-slate-500">{summary.repo_url}</p>
           </div>
-          <div className="flex flex-wrap gap-2 items-start h-min">
-            <span className="badge badge-blue text-sm px-3 py-1 shadow-sm">
+          <div className="flex h-min flex-wrap items-start gap-2">
+            <span className="badge badge-blue">
               {summary.detected_framework ?? "Framework pending"}
             </span>
-            <span className="badge badge-gray text-xs font-mono px-3 py-1 shadow-sm border border-gray-200 bg-white">
+            <span className="badge badge-gray font-mono">
               {summary.repo_id}
             </span>
           </div>
         </div>
 
         {indexMessage && (
-          <div className={`mb-6 rounded-xl border p-4 text-sm font-medium ${indexMessageClasses}`}>
+          <div className={`mb-5 rounded-lg border p-4 text-sm font-semibold ${indexMessageClasses}`}>
             {indexMessage}
           </div>
         )}
         
         {warnings.length > 0 && (
-          <div className="mb-6 space-y-2">
+          <div className="mb-5 space-y-2">
             {warnings.map((warning) => (
-              <div key={warning} className="p-3 rounded-lg bg-orange-50 border border-orange-100 text-orange-800 text-sm">
+              <div key={warning} className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm font-medium text-amber-200">
                 {warning}
               </div>
             ))}
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-            <div className="text-sm font-medium text-gray-500 mb-1">Total Files</div>
-            <div className="text-2xl font-bold text-gray-900">{summary.file_count}</div>
-          </div>
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-            <div className="text-sm font-medium text-gray-500 mb-1">Classes</div>
-            <div className="text-2xl font-bold text-gray-900">{summary.total_classes}</div>
-          </div>
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-            <div className="text-sm font-medium text-gray-500 mb-1">Functions</div>
-            <div className="text-2xl font-bold text-gray-900">{summary.total_functions}</div>
-          </div>
-          <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
-            <div className="text-sm font-medium text-blue-600 mb-1">{indexMetricLabel}</div>
-            <div className="text-2xl font-bold text-blue-900">{summary.indexed_file_count}</div>
-          </div>
+        <div className="mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 md:grid-cols-4">
+          {metrics.map((metric, index) => (
+            <div key={metric.label} className={`bg-black/45 p-4 ${index === metrics.length - 1 ? "text-white" : "text-slate-100"}`}>
+              <div className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">{metric.label}</div>
+              <div className="font-mono text-3xl font-semibold">{metric.value}</div>
+            </div>
+          ))}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid gap-7 md:grid-cols-2">
           <div>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Major Modules</h3>
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Major Modules</h3>
             {renderTokens(summary.major_modules, "Pending deeper analysis")}
           </div>
 
           <div>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Entry Points</h3>
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Entry Points</h3>
             {renderTokens(summary.entry_points, "Pending deeper analysis")}
           </div>
 
           <div>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Important Files</h3>
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Important Files</h3>
             {renderTokens(summary.important_files, "No standout files detected yet")}
           </div>
 
           <div>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Languages</h3>
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Languages</h3>
             {Object.entries(summary.languages).length ? (
               <div className="flex flex-wrap gap-2">
                 {Object.entries(summary.languages).map(([language, count]) => (
-                  <span key={language} className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 border border-gray-200 text-sm font-medium text-gray-700">
-                    {language} <span className="ml-2 text-gray-400">({count})</span>
+                  <span key={language} className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-xs font-semibold text-slate-300">
+                    {language} <span className="ml-2 text-slate-500">({count})</span>
                   </span>
                 ))}
               </div>
             ) : (
-              <div className="text-gray-500 italic text-sm py-2">No language breakdown available</div>
+              <div className="py-2 text-sm italic text-slate-600">No language breakdown available</div>
             )}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -26,19 +26,36 @@ export function InterrogateWorkspace({
   onNavigate
 }: InterrogateWorkspaceProps) {
   return (
-    <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex shrink-0 flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+    <div className="mx-auto flex h-full w-full max-w-6xl flex-col gap-5 animate-fade-up">
+      <div className="flex shrink-0 flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">Interrogate Codebase</h2>
-          <p className="mt-1 text-sm text-gray-500">Ask architecture, routing, configuration, or flow questions.</p>
+          <div className="mb-2 inline-flex items-center rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400 shadow-sm backdrop-blur">
+            Research console
+          </div>
+          <h2 className="text-3xl font-bold tracking-normal text-white md:text-4xl">Interrogate Codebase</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Ask architecture, routing, configuration, or flow questions from indexed context.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {summary?.repo_name && (
-            <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-800 shadow-sm">
-              <span className="mr-2 opacity-75">Target:</span>
+            <div className="rounded-full border border-white bg-white px-3 py-1.5 text-sm font-semibold text-black shadow-sm">
+              <span className="mr-2 opacity-75">Target</span>
               {summary.repo_name}
             </div>
           )}
+          {summary?.indexed_file_count ? (
+            <div className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-sm font-semibold text-slate-300 shadow-sm">
+              <span className="mr-2 text-slate-400">Indexed</span>
+              {summary.indexed_file_count}
+            </div>
+          ) : null}
+          {summary?.detected_framework ? (
+            <div className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-sm font-semibold text-slate-300 shadow-sm">
+              {summary.detected_framework}
+            </div>
+          ) : null}
+          <button className="btn-secondary h-9 px-3 text-xs" onClick={() => onNavigate("architecture")} type="button">
+            View map
+          </button>
         </div>
       </div>
 

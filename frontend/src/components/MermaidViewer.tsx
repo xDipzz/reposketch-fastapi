@@ -118,7 +118,7 @@ export function MermaidViewer({ chart, layoutMode = "natural" }: MermaidViewerPr
 
   if (error) {
     return (
-      <div className="flex min-h-[34rem] items-center justify-center rounded-[28px] border border-red-200 bg-red-50 p-8 text-red-600">
+      <div className="flex min-h-[34rem] items-center justify-center rounded-2xl border border-red-400/20 bg-red-400/10 p-8 text-red-200">
         <div className="text-center">
           <svg className="mx-auto mb-3 h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -136,37 +136,42 @@ export function MermaidViewer({ chart, layoutMode = "natural" }: MermaidViewerPr
 
   if (!svg) {
     return (
-      <div className="flex min-h-[34rem] items-center justify-center rounded-[28px] border border-slate-200 bg-slate-50/80 backdrop-blur-sm">
+      <div className="flex min-h-[34rem] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm">
         <div className="flex flex-col items-center">
           <svg className="mb-4 h-8 w-8 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <p className="font-medium text-gray-500">Rendering diagram...</p>
+          <p className="font-medium text-slate-500">Rendering diagram...</p>
         </div>
       </div>
     );
   }
 
   const shellClasses = [
-    "border border-slate-200 bg-slate-100/80 shadow-inner",
+    "border border-white/10 bg-black/35 shadow-inner",
     isFullscreen
-      ? "h-screen w-full overflow-auto rounded-none bg-slate-100"
+      ? "h-screen w-full overflow-auto rounded-none bg-black"
       : layoutMode === "fit-width"
-        ? "w-full min-w-0 rounded-[28px] overflow-visible"
-        : "w-max min-w-full rounded-[28px] overflow-visible"
+        ? "w-full min-w-0 rounded-2xl overflow-visible"
+        : "w-max min-w-full rounded-2xl overflow-visible"
   ].join(" ");
 
   const canvasClasses =
     layoutMode === "fit-width"
-      ? "w-full min-w-0 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-6 xl:p-8"
-      : "w-max min-w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm md:p-6 xl:p-8";
+      ? "w-full min-w-0 rounded-2xl border border-white/10 bg-white p-4 shadow-sm md:p-6 xl:p-8"
+      : "w-max min-w-full rounded-2xl border border-white/10 bg-white p-4 shadow-sm md:p-6 xl:p-8";
 
   const diagramClasses = layoutMode === "fit-width" ? "w-full min-w-0" : "w-max min-w-full";
 
   return (
     <div ref={viewerRef} className={shellClasses}>
-      <div className={`flex items-center justify-end gap-2 border-b border-slate-200 bg-white/90 px-4 py-3 ${isFullscreen ? "sticky top-0 z-20 backdrop-blur" : ""}`}>
+      <div className={`flex items-center justify-between gap-3 border-b border-white/10 bg-black/45 px-4 py-3 ${isFullscreen ? "sticky top-0 z-20 backdrop-blur" : ""}`}>
+        <div className="hidden items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 sm:flex">
+          <span className="h-2 w-2 rounded-full bg-blue-500" />
+          Diagram stage
+        </div>
+        <div className="flex items-center gap-2">
         <button
           className="btn-secondary px-3 py-1.5 text-xs"
           onClick={() => setZoom((current) => Math.max(0.7, Number((current - 0.15).toFixed(2))))}
@@ -187,6 +192,7 @@ export function MermaidViewer({ chart, layoutMode = "natural" }: MermaidViewerPr
         <button className="btn-secondary px-3 py-1.5 text-xs" onClick={toggleFullscreen} type="button">
           {isFullscreen ? "Exit full screen" : "Full screen"}
         </button>
+        </div>
       </div>
 
       <div className={isFullscreen ? "overflow-auto px-4 py-4 md:px-6 xl:px-8" : "px-4 py-4 md:px-6 xl:px-8"}>

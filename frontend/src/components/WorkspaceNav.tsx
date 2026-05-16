@@ -7,71 +7,87 @@ type WorkspaceNavProps = {
 };
 
 const workspaces = [
-  { id: "briefing" as const, label: "Briefing", blurb: "Ingest and summary" },
-  { id: "architecture" as const, label: "Architecture", blurb: "Diagram workspace" },
-  { id: "interrogate" as const, label: "Interrogate", blurb: "Grounded Q&A" }
+  { id: "briefing" as const, label: "Briefing", blurb: "Ingest and summary", glyph: "01" },
+  { id: "architecture" as const, label: "Architecture", blurb: "Diagram workspace", glyph: "02" },
+  { id: "interrogate" as const, label: "Interrogate", blurb: "Grounded Q&A", glyph: "03" }
 ];
 
 export function WorkspaceNav({ activeView, indexStatus, onChange }: WorkspaceNavProps) {
+  const statusTone =
+    indexStatus === "ready"
+      ? "bg-emerald-500"
+      : indexStatus === "indexing"
+        ? "bg-amber-500 signal-pulse"
+        : indexStatus === "error"
+          ? "bg-red-500"
+          : "bg-slate-300";
+
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full shrink-0">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="flex-center w-10 h-10 rounded-xl bg-blue-600 text-white font-bold text-xl shadow-sm flex items-center justify-center">
-            RS
-          </div>
-          <div>
-            <h1 className="font-bold text-gray-900 leading-tight">RepoSketch</h1>
-            <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Intelligence</p>
-          </div>
+    <header className="relative z-30 mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between gap-4 px-5 pb-16 pt-6 md:pb-6 lg:px-8">
+      <div className="flex items-center gap-3">
+        <div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-white text-black shadow-[0_0_40px_-18px_rgba(255,255,255,0.9)]">
+          <span className="text-[12px] font-black">RS</span>
+        </div>
+        <div className="min-w-0">
+          <h1 className="leading-tight text-sm font-bold text-white">RepoSketch</h1>
+          <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.28em] text-slate-500">Code intelligence</p>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        <p className="px-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Workspaces</p>
+      <nav className="hidden items-center rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-xl md:flex">
         {workspaces.map((workspace) => {
           const isActive = activeView === workspace.id;
           return (
             <button
               key={workspace.id}
-              className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 border ${
+              className={`group inline-flex items-center gap-2 rounded-full px-4 py-2 text-left transition-all duration-200 ${
                 isActive
-                  ? "bg-blue-50 border-blue-100 shadow-sm"
-                  : "bg-transparent border-transparent hover:bg-gray-50"
+                  ? "bg-white text-black shadow-[0_10px_40px_-28px_rgba(255,255,255,0.9)]"
+                  : "text-slate-400 hover:bg-white/[0.06] hover:text-white"
               }`}
               onClick={() => onChange(workspace.id)}
+              type="button"
             >
-              <strong className={`block text-sm font-semibold ${isActive ? "text-blue-900" : "text-gray-700"}`}>
-                {workspace.label}
-              </strong>
-              <span className={`block text-xs mt-0.5 ${isActive ? "text-blue-700" : "text-gray-500"}`}>
-                {workspace.blurb}
+              <span className={`font-mono text-[10px] font-semibold ${isActive ? "text-black/45" : "text-slate-600 group-hover:text-slate-500"}`}>
+                {workspace.glyph}
+              </span>
+              <span className="min-w-0 leading-none">
+                <strong className="block text-sm font-semibold">
+                  {workspace.label}
+                </strong>
               </span>
             </button>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-200">
-        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <p className="text-xs text-gray-500 font-medium mb-1 uppercase tracking-wider">Index Status</p>
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                indexStatus === "ready" ? "bg-green-500" :
-                indexStatus === "indexing" ? "bg-yellow-500 animate-pulse" :
-                indexStatus === "error" ? "bg-red-500" : "bg-gray-300"
-              }`}
-            />
-            <span className="text-sm font-medium text-gray-700">
-              {indexStatus === "idle" && "Awaiting Index"}
-              {indexStatus === "indexing" && "Indexing..."}
-              {indexStatus === "ready" && "Ready for Q&A"}
-              {indexStatus === "error" && "Index Failed"}
-            </span>
-          </div>
-        </div>
+      <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 backdrop-blur-xl">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${statusTone}`} />
+        <span className="hidden text-xs font-semibold text-slate-300 sm:inline">
+          {indexStatus === "idle" && "Awaiting index"}
+          {indexStatus === "indexing" && "Indexing"}
+          {indexStatus === "ready" && "Ready"}
+          {indexStatus === "error" && "Index failed"}
+        </span>
       </div>
-    </aside>
+
+      <nav className="absolute inset-x-5 top-[4.75rem] flex items-center gap-2 overflow-x-auto pb-2 md:hidden">
+        {workspaces.map((workspace) => {
+          const isActive = activeView === workspace.id;
+          return (
+            <button
+              key={workspace.id}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                isActive ? "bg-white text-black" : "border border-white/10 bg-white/[0.04] text-slate-400"
+              }`}
+              onClick={() => onChange(workspace.id)}
+              type="button"
+            >
+              {workspace.label}
+            </button>
+          );
+        })}
+      </nav>
+    </header>
   );
 }

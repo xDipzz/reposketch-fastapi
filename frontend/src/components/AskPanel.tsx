@@ -32,6 +32,8 @@ export function AskPanel({
 }: AskPanelProps) {
   const [question, setQuestion] = useState("");
   const visibleChunks = response?.retrieved_chunks.slice(0, 6) ?? [];
+  const sourceCount = response?.sources.length ?? 0;
+  const chunkCount = response?.retrieved_chunks.length ?? 0;
 
   const submit = () => {
     const nextQuestion = question.trim();
@@ -42,12 +44,12 @@ export function AskPanel({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="overflow-hidden rounded-[28px] border border-gray-200 bg-white shadow-sm">
-        <div className="shrink-0 border-b border-gray-200 bg-gray-50/60 p-6">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="min-w-0 space-y-5">
+        <section className="premium-panel p-5">
           <div className="relative">
             <textarea
-              className="min-h-[120px] w-full resize-none rounded-xl border border-gray-300 bg-white p-4 pr-32 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="min-h-[132px] w-full resize-none rounded-2xl border border-white/10 bg-black/55 p-4 pr-32 text-sm text-slate-100 shadow-inner outline-none transition-all placeholder:text-slate-600 focus:border-white/25 focus:bg-black/75 focus:ring-4 focus:ring-white/5"
               placeholder={disabled ? disabledReason || "Analyze a repo first" : "How does authentication work?"}
               value={question}
               disabled={disabled}
@@ -60,28 +62,24 @@ export function AskPanel({
               onChange={(event) => setQuestion(event.target.value)}
             />
             <div className="absolute bottom-4 right-4 flex items-center gap-2">
-              <span className="hidden font-mono text-[10px] text-gray-400 sm:inline">⌘+Enter</span>
+              <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 sm:inline">Cmd+Enter</span>
               <button
-                className="btn-primary rounded-lg px-4 py-1.5 text-sm"
+                className="btn-primary h-9 px-4 text-sm"
                 disabled={disabled || loading || !question.trim()}
                 onClick={submit}
                 type="button"
               >
-                {loading ? (
-                  <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  "Ask"
-                )}
+                {loading ? "..." : "Ask"}
               </button>
             </div>
           </div>
 
-          {error && <div className="mt-4 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-          {statusMessage && !response && !loading && !error && (
-            <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-700">{statusMessage}</div>
+          {error && <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/10 p-3 text-sm font-medium text-red-200">{error}</div>}
+          {disabled && disabledReason ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-sm font-medium text-slate-500">{disabledReason}</div>
+          ) : null}
+          {statusMessage && !response && !loading && !error && !disabled && (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.055] p-3 text-sm font-medium text-slate-300">{statusMessage}</div>
           )}
 
           {!response && !loading && !disabled && (
@@ -89,7 +87,7 @@ export function AskPanel({
               {sampleQuestions.map((item) => (
                 <button
                   key={item}
-                  className="rounded-full bg-gray-100 px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-200"
+                  className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 text-xs font-semibold text-slate-400 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
                   onClick={() => {
                     setQuestion(item);
                   }}
@@ -100,82 +98,85 @@ export function AskPanel({
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="bg-white p-6">
+        <section className="premium-panel min-h-[24rem] p-6">
           {loading ? (
-            <div className="flex min-h-[18rem] flex-col items-center justify-center space-y-4">
-              <svg className="h-8 w-8 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <div className="font-medium text-gray-500">Searching indexed files...</div>
+            <div className="flex min-h-[20rem] flex-col justify-center space-y-4">
+              <div className="h-2 w-28 rounded-full bg-white signal-pulse" />
+              <div className="h-5 w-2/3 rounded-full bg-white/10" />
+              <div className="h-5 w-1/2 rounded-full bg-white/10" />
+              <div className="h-24 rounded-2xl border border-white/10 bg-white/[0.04]" />
+              <div className="font-semibold text-slate-500">Searching indexed files...</div>
             </div>
           ) : response ? (
             <div className="prose max-w-none">
-              <div className="mb-6 flex items-center gap-2 border-b border-gray-100 pb-4">
-                <span className="rounded bg-blue-50 px-2 py-1 text-xs font-bold uppercase tracking-widest text-blue-600">Response</span>
-                <span className="text-xs font-mono text-gray-500">{response.repo_name}</span>
+              <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-white/10 pb-4">
+                <span className="rounded-full border border-white bg-white px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-black">Response</span>
+                <span className="font-mono text-xs text-slate-500">{response.repo_name}</span>
+                <span className="rounded-full border border-white/10 bg-white/[0.055] px-2 py-1 font-mono text-[10px] text-slate-500">{sourceCount} sources</span>
+                <span className="rounded-full border border-white/10 bg-white/[0.055] px-2 py-1 font-mono text-[10px] text-slate-500">{chunkCount} chunks</span>
               </div>
               <ReactMarkdown>{response.answer}</ReactMarkdown>
             </div>
           ) : (
-            <div className="mx-auto flex min-h-[18rem] max-w-sm flex-col items-center justify-center text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-                <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
+            <div className="flex min-h-[20rem] flex-col justify-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.055] font-mono text-sm font-bold text-slate-500 shadow-sm">
+                QA
               </div>
-              <p className="font-medium text-gray-500">Ask a question to receive a grounded answer with explicit source files and chunks.</p>
+              <p className="max-w-md text-sm font-semibold leading-6 text-slate-500">
+                Ask a question to receive a grounded answer with explicit source files and retrieved chunks.
+              </p>
             </div>
           )}
-        </div>
+        </section>
       </div>
 
-      {response ? (
-        <>
-          <div className="rounded-[28px] border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-4 text-xs font-bold uppercase tracking-[0.24em] text-gray-500">Referenced Sources</h3>
-            <SourceList sources={response.sources} />
-          </div>
+      <aside className="space-y-5">
+        {response ? (
+          <>
+            <section className="premium-panel p-5">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Sources</h3>
+                <span className="font-mono text-xs text-slate-400">{sourceCount}</span>
+              </div>
+              <SourceList sources={response.sources} />
+            </section>
 
-          <div className="rounded-[28px] border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-gray-500">Retrieved Context</h3>
-              <span className="text-xs font-mono text-gray-400">{visibleChunks.length} chunks</span>
-            </div>
-            <ul className="grid gap-4 lg:grid-cols-2">
-              {visibleChunks.map((chunk) => (
-                <li key={`${chunk.file_path}-${chunk.chunk_index}`} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <div className="mb-2 flex items-baseline justify-between gap-2 border-b border-gray-200 pb-2">
-                    <strong className="truncate font-mono text-sm text-gray-900">{chunk.file_path}</strong>
-                    <span className="shrink-0 font-mono text-[10px] text-gray-400">chunk {chunk.chunk_index}</span>
-                  </div>
-                  {chunk.symbol_names.length ? (
-                    <div className="mb-3 flex flex-wrap gap-1">
-                      {chunk.symbol_names.map((sym) => (
-                        <span key={sym} className="rounded border border-blue-100 bg-blue-50 px-1.5 py-0.5 font-mono text-[10px] text-blue-700">
-                          {sym}
-                        </span>
-                      ))}
+            <section className="premium-panel p-5">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h3 className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Context</h3>
+                <span className="font-mono text-xs text-slate-400">{visibleChunks.length}</span>
+              </div>
+              <ul className="space-y-3">
+                {visibleChunks.map((chunk) => (
+                  <li key={`${chunk.file_path}-${chunk.chunk_index}`} className="rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+                    <div className="mb-2 flex items-baseline justify-between gap-2 border-b border-white/10 pb-2">
+                      <strong className="truncate font-mono text-xs text-slate-200" title={chunk.file_path}>{chunk.file_path}</strong>
+                      <span className="shrink-0 font-mono text-[10px] text-slate-400">#{chunk.chunk_index}</span>
                     </div>
-                  ) : null}
-                  <p className="font-mono text-xs leading-relaxed text-gray-600">{chunk.preview}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      ) : (
-        <div className="flex min-h-[12rem] flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center font-medium text-gray-400">
-          Sources and retrieved context will appear here after the first answer.
-        </div>
-      )}
+                    {chunk.symbol_names.length ? (
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        {chunk.symbol_names.map((sym) => (
+                          <span key={sym} className="rounded-full border border-white/10 bg-white/[0.055] px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
+                            {sym}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <p className="font-mono text-[11px] leading-5 text-slate-500">{chunk.preview}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </>
+        ) : (
+          <section className="premium-panel flex min-h-[16rem] flex-col justify-center p-5">
+            <h3 className="text-sm font-bold text-white">Evidence rail</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Sources and retrieved context will appear here after the first answer.</p>
+          </section>
+        )}
+      </aside>
     </div>
   );
 }
