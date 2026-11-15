@@ -133,7 +133,14 @@ class Settings(BaseModel):
     @property
     def frontend_origins(self) -> list[str]:
         origins = [self.frontend_origin, *self.extra_frontend_origins]
-        origins.extend(["http://localhost:5173", "http://127.0.0.1:5173"])
+        origins.extend(
+            [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:4173",
+                "http://127.0.0.1:4173",
+            ]
+        )
         return list(dict.fromkeys(origin.strip().rstrip("/") for origin in origins if origin.strip()))
 
     @property

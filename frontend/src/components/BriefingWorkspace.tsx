@@ -174,7 +174,7 @@ export function BriefingWorkspace({
       </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <InsightPanel
             insights={insights}
             loading={insightsLoading}
@@ -184,7 +184,7 @@ export function BriefingWorkspace({
           <SummaryCard summary={summary} warnings={warnings} />
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <section className="panel p-4">
             <div className="flex items-center justify-between gap-3">
               <div>

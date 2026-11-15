@@ -20,7 +20,7 @@ export function InsightPanel({
   return (
     <section className="panel overflow-hidden">
       <div className="panel-header">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded-[7px] bg-accent-tint text-accent-ink">
             <Icon name="sparkles" size={14} />
           </span>
@@ -29,9 +29,9 @@ export function InsightPanel({
             <p className="text-[11px] text-ink-3">Generated from repository metadata by Gemini</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {insights ? (
-            <StatusPill tone="accent" dot={false}>
+            <StatusPill tone="accent" dot={false} className="hidden sm:inline-flex">
               {insights.model}
             </StatusPill>
           ) : null}
