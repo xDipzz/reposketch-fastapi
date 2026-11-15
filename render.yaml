@@ -30,6 +30,8 @@ services:
         value: 400
       - key: MAX_INDEX_CHUNKS
         value: 1200
+      - key: INDEX_EXCLUDED_FILES
+        value: changes.md,changelog.md,changes.rst,license,license.txt,license.md,notice
       - key: INDEX_EMBEDDING_PROVIDER
         value: local
       - key: GEMINI_API_KEY

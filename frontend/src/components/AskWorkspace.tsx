@@ -147,6 +147,7 @@ export function AskWorkspace({
                 }
                 disabled={Boolean(disabledReason) || loading}
                 rows={2}
+                aria-label="Ask a question about the repository"
                 className="max-h-40 min-h-12 w-full resize-none bg-transparent px-2.5 py-2 text-[13px] leading-6 text-ink outline-none placeholder:text-ink-3 disabled:cursor-not-allowed"
               />
               <div className="flex items-center justify-between gap-2 px-1 pb-1">
@@ -204,7 +205,7 @@ export function AskWorkspace({
                     chars: chunk.score != null ? `${Math.round(chunk.score * 100)}% match` : undefined,
                     body: chunk.preview,
                     source: chunk.file_path,
-                    tone: chunk.file_path.endsWith(".py") ? "bg-accent" : "bg-green"
+                    tone: "bg-ink"
                   }))}
                 />
               </div>
