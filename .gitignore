@@ -18,3 +18,5 @@ frontend/vite.config.d.ts
 info/
 config.toml.codex.bak
 config.toml.codex.work
+.vercel
+.env*
