@@ -27,6 +27,7 @@ type BriefingWorkspaceProps = {
   insightsLoading: boolean;
   insightsError: string | null;
   error: string | null;
+  creditsRemaining: number | null;
   onAnalyze: (url: string) => void;
   onGenerateInsights: () => void;
   onNavigate: (view: WorkspaceView) => void;
@@ -42,6 +43,7 @@ export function BriefingWorkspace({
   insightsLoading,
   insightsError,
   error,
+  creditsRemaining,
   onAnalyze,
   onGenerateInsights,
   onNavigate
@@ -62,6 +64,7 @@ export function BriefingWorkspace({
           loading={loading}
           statusText={statusText}
           indexStatus={indexState.status}
+          creditsRemaining={creditsRemaining}
           onAnalyze={onAnalyze}
         />
       </div>

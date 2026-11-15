@@ -20,14 +20,17 @@ export function RepoInput({
   loading,
   statusText,
   indexStatus,
+  creditsRemaining = null,
   onAnalyze
 }: {
   loading: boolean;
   statusText: string | null;
   indexStatus: "idle" | "indexing" | "ready" | "error";
+  creditsRemaining?: number | null;
   onAnalyze: (url: string) => void;
 }) {
   const [repoUrl, setRepoUrl] = useState("");
+  const insufficientCredits = creditsRemaining !== null && creditsRemaining < 35;
 
   return (
     <div className="space-y-4">
@@ -72,13 +75,24 @@ export function RepoInput({
                   aria-label="GitHub repository URL"
                 />
               </div>
-              <Button type="submit" size="lg" variant="primary" disabled={loading || !repoUrl.trim()}>
+              <Button
+                type="submit"
+                size="lg"
+                variant="primary"
+                disabled={loading || !repoUrl.trim() || insufficientCredits}
+              >
                 {loading ? <Icon name="loader" size={15} className="animate-spin" /> : <Icon name="sparkles" size={15} />}
-                {loading ? "Analyzing" : "Start analysis"}
+                {loading ? "Analyzing" : insufficientCredits ? "Credits needed" : "Start analysis"}
               </Button>
             </div>
           </div>
         </form>
+
+        {insufficientCredits ? (
+          <p className="mt-3 rounded-full border border-orange/25 bg-orange-tint px-3 py-1 text-[11px] font-medium text-orange">
+            A full analysis needs 35 credits · {creditsRemaining} left today
+          </p>
+        ) : null}
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
           <span className="mr-1 text-[11px] text-ink-3">Try</span>

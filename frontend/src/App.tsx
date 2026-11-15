@@ -128,6 +128,13 @@ export default function App() {
   const handleAnalyze = async (url: string) => {
     const targetUrl = url.trim();
     if (!targetUrl || loadingRepo) return;
+    if (usage && usage.remaining < 35) {
+      setError(
+        `A full analysis costs 35 credits (10 analyze + 20 index + 5 briefing). You have ${usage.remaining} left today.`
+      );
+      navigate("briefing");
+      return;
+    }
 
     const run = ++runRef.current;
     setLoadingRepo(true);
@@ -298,6 +305,10 @@ export default function App() {
 
   const handleGenerateInsights = async () => {
     if (!activeRepoId || insightsLoading) return;
+    if (usage && usage.remaining < 5) {
+      setInsightsError(`Generating a briefing costs 5 credits. You have ${usage.remaining} left today.`);
+      return;
+    }
     setInsightsLoading(true);
     setInsightsError(null);
     try {
@@ -318,9 +329,11 @@ export default function App() {
       ? "Indexing is still running."
       : indexState.status === "error"
         ? "Q&A is unavailable until indexing succeeds."
-        : indexState.status !== "ready"
-          ? "This repository has no retrieval index yet. Re-analyze or index it first."
-          : null;
+        : usage && usage.remaining < 2
+          ? "Not enough credits for a question (2 needed)."
+          : indexState.status !== "ready"
+            ? "This repository has no retrieval index yet. Re-analyze or index it first."
+            : null;
 
   const handleAsk = async (question: string) => {
     if (!activeRepoId || asking || askDisabledReason) return;
@@ -415,6 +428,7 @@ export default function App() {
               insightsLoading={insightsLoading}
               insightsError={insightsError}
               error={error}
+              creditsRemaining={usage?.remaining ?? null}
               onAnalyze={(url) => void handleAnalyze(url)}
               onGenerateInsights={() => void handleGenerateInsights()}
               onNavigate={navigate}
