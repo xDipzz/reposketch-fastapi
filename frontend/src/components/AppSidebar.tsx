@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import type { Health, RepoHistoryItem } from "@/api/client";
+import type { RepoHistoryItem, Usage } from "@/api/client";
 import { GlideMenu } from "@/components/atoms/GlideMenu";
 import { StatusPill } from "@/components/atoms/StatusPill";
 import { Icon, type IconName } from "@/components/icons/Icons";
+import { UsageCard } from "@/components/UsageMeter";
 import { cn } from "@/lib/utils";
 
 export type WorkspaceView = "briefing" | "architecture" | "ask";
@@ -17,7 +18,7 @@ type AppSidebarProps = {
   activeView: WorkspaceView;
   history: RepoHistoryItem[];
   activeRepoId: string | null;
-  health: Health | null;
+  usage: Usage | null;
   indexStatus: "idle" | "indexing" | "ready" | "error";
   onNavigate: (view: WorkspaceView) => void;
   onSelectRepo: (repoId: string) => void;
@@ -29,7 +30,7 @@ export function AppSidebar({
   activeView,
   history,
   activeRepoId,
-  health,
+  usage,
   indexStatus,
   onNavigate,
   onSelectRepo,
@@ -204,12 +205,13 @@ export function AppSidebar({
           </StatusPill>
           <Icon name="database" size={13} className="text-ink-3" />
         </div>
-        <div className="mt-2.5 flex items-center gap-2 border-t border-line pt-2">
-          <span className={cn("size-1.5 rounded-full", health?.ai_configured ? "bg-green" : "bg-orange")} />
-          <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-ink-3">
-            {health ? health.ai_model : "checking backend..."}
+        <UsageCard usage={usage} />
+        <div className="mt-2 flex items-center gap-1.5 border-t border-line pt-2">
+          <span className={`size-1.5 rounded-full ${usage ? "bg-green" : "bg-ink-3"}`} />
+          <span className="min-w-0 flex-1 truncate text-[9.5px] font-medium text-ink-3">
+            {usage ? "API online" : "Connecting"}
           </span>
-          <span className="font-mono text-[9.5px] text-ink-3">{health ? `v${health.version}` : ""}</span>
+          <span className="font-mono text-[9px] text-ink-3">100/day</span>
         </div>
       </div>
     </aside>

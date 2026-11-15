@@ -20,7 +20,8 @@ Live deployment:
 - Answers questions with Gemini using retrieved repository context only
 - Shows sources, symbols, relevance scores, and retrieved chunk previews
 - Keeps a recent-repository history with delete support
-- Ships in light and dark themes with a responsive layout
+- Enforces a visible **100-credit daily allowance** per browser/visitor
+- Ships in a metallic-black theme with light mode and a responsive layout
 
 ## Stack
 
@@ -145,6 +146,7 @@ npm run build
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/health` | Status, version, AI config, vector store |
+| `GET` | `/usage` | Daily credit balance, reset time, and action costs |
 | `GET` | `/analyze/repositories` | Recent repository history |
 | `POST` | `/analyze/repo-load` | Clone + parse a repository |
 | `GET` | `/analyze/summary?repo_id=` | Stored summary |
@@ -221,9 +223,31 @@ curl https://reposketch-api.onrender.com/health
 curl https://reposketch.vercel.app/api/health
 ```
 
+## Daily credits
+
+Every browser gets **100 credits per UTC day**. The frontend generates an anonymous
+workspace ID and sends it as `X-Client-ID`; the backend also applies a separate
+IP-level backstop (`IP_DAILY_CREDIT_LIMIT`, default 300) so clearing browser
+storage is not a free reset.
+
+| Action | Cost |
+|---|---:|
+| Analyze repository | 10 |
+| Build retrieval index | 20 |
+| Generate AI briefing | 5 |
+| Ask a repository question | 2 |
+
+A normal first run costs 35 credits and leaves 65 for questions. Failed charged
+actions are refunded. The sidebar and top bar show the remaining balance and
+reset time. The daily ledger lives in `backend/storage/analysis/usage.sqlite3`
+(or the configured analysis directory).
+
 ## Notes and limits
 
 - Only public GitHub URLs are accepted.
+- The credit ledger is local SQLite. Render free instances wipe `/tmp` on restart,
+  so a free deployment also resets usage on restart; add durable storage if the
+  limit must survive restarts.
 - Repos are capped at 4000 files / 400 MB.
 - `CHANGES.md`, changelogs, licenses, tests, docs, examples, and build folders are excluded from the retrieval index by default to keep answers focused on source code.
 - The API is a demo deployment: add authentication/rate limiting before exposing it to untrusted traffic.

@@ -26,13 +26,13 @@ export function InsightPanel({
           </span>
           <div>
             <h2 className="text-[13px] font-semibold text-ink">AI briefing</h2>
-            <p className="text-[11px] text-ink-3">Generated from repository metadata by Gemini</p>
+            <p className="text-[11px] text-ink-3">Generated from repository metadata</p>
           </div>
         </div>
         <div className="flex min-w-0 items-center gap-2">
           {insights ? (
             <StatusPill tone="accent" dot={false} className="hidden sm:inline-flex">
-              {insights.model}
+              Cached
             </StatusPill>
           ) : null}
           <Button
@@ -143,7 +143,7 @@ export function InsightPanel({
               </span>
               <p className="max-w-lg text-[12.5px] leading-5 text-ink-2">
                 Generate a senior-engineer briefing with an overview, architecture notes,
-                entry points, and risks. One free Gemini request, cached on the server.
+                entry points, and risks. The result is cached on the server.
               </p>
             </div>
             <Button size="sm" variant="primary" onClick={onGenerate} disabled={loading}>

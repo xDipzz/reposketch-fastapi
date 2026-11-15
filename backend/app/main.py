@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import time
+from datetime import UTC, datetime
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +26,7 @@ from app.schemas import (
     RepoLoadResponse,
     RepoMetadataPublic,
     RepoSummaryResponse,
+    UsageResponse,
 )
 from app.services.analysis_store import AnalysisStore
 from app.services.diagram_service import DiagramService
@@ -34,6 +36,7 @@ from app.services.insights_service import InsightsService
 from app.services.qa_service import QAService
 from app.services.repo_loader import RepoLoader
 from app.services.repo_parser import RepoParser, build_repo_summary
+from app.services.usage_service import UsageLimitError, UsageService, UsageSnapshot
 
 
 settings = get_settings()
@@ -46,6 +49,7 @@ diagram_service = DiagramService()
 indexing_service = IndexingService(settings)
 qa_service = QAService(settings, indexing_service)
 insights_service = InsightsService(settings)
+usage_service = UsageService(settings)
 
 app = FastAPI(
     title=settings.app_name,
@@ -73,6 +77,35 @@ async def add_process_headers(request: Request, call_next):
     response.headers["X-Process-Time-Ms"] = f"{(time.perf_counter() - started) * 1000:.1f}"
     response.headers["X-RepoSketch-Version"] = settings.app_version
     return response
+
+
+def _client_keys(request: Request) -> tuple[str, str]:
+    return usage_service.identify(
+        request.headers,
+        request.client.host if request.client else None,
+    )
+
+
+def _charge(request: Request, action: str) -> tuple[str, str, UsageSnapshot]:
+    client_key, ip_key = _client_keys(request)
+    try:
+        snapshot = usage_service.consume(client_key, ip_key, action)
+    except UsageLimitError as exc:
+        retry_after = max(1, int((exc.reset_at - datetime.now(UTC)).total_seconds()))
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+            headers={"Retry-After": str(retry_after)},
+        ) from exc
+    return client_key, ip_key, snapshot
+
+
+def _refund(client_key: str, ip_key: str, action: str) -> None:
+    usage_service.refund(client_key, ip_key, action)
+
+
+def _usage_response(snapshot: UsageSnapshot) -> UsageResponse:
+    return UsageResponse(**snapshot.as_dict())
 
 
 def _require_record(repo_id: str | None = None) -> AnalysisRecord:
@@ -107,6 +140,12 @@ def healthcheck() -> HealthResponse:
     )
 
 
+@app.get("/usage", response_model=UsageResponse)
+def get_usage(request: Request) -> UsageResponse:
+    client_key, ip_key = _client_keys(request)
+    return _usage_response(usage_service.snapshot(client_key, ip_key))
+
+
 @app.get("/analyze/repositories", response_model=RepoHistoryResponse)
 def list_repositories() -> RepoHistoryResponse:
     items: list[RepoHistoryItem] = []
@@ -130,12 +169,17 @@ def list_repositories() -> RepoHistoryResponse:
 
 
 @app.post("/analyze/repo-load", response_model=RepoLoadResponse)
-def analyze_repo_load(payload: RepoLoadRequest) -> RepoLoadResponse:
+def analyze_repo_load(payload: RepoLoadRequest, request: Request) -> RepoLoadResponse:
+    client_key, ip_key, _ = _charge(request, "repo_load")
     try:
         loaded_repo = repo_loader.clone_repository(payload.repo_url)
         metadata = repo_parser.parse_repository(loaded_repo)
     except ValueError as exc:
+        _refund(client_key, ip_key, "repo_load")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        _refund(client_key, ip_key, "repo_load")
+        raise
 
     summary = build_repo_summary(metadata)
     graph_bundle = graph_builder.build(metadata)
@@ -183,16 +227,19 @@ def analyze_diagrams(repo_id: str | None = Query(default=None)) -> DiagramsRespo
 
 
 @app.post("/analyze/index", response_model=IndexResponse)
-def analyze_index(payload: IndexRequest) -> IndexResponse:
+def analyze_index(payload: IndexRequest, request: Request) -> IndexResponse:
     record = _require_record(payload.repo_id)
+    client_key, ip_key, _ = _charge(request, "index")
     try:
         result = indexing_service.index_repository(
             record.metadata,
             force_reindex=payload.force_reindex,
         )
     except ValueError as exc:
+        _refund(client_key, ip_key, "index")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        _refund(client_key, ip_key, "index")
         raise HTTPException(status_code=500, detail=f"Indexing failed: {exc}") from exc
 
     with analysis_store.lock():
@@ -229,17 +276,22 @@ def analyze_index(payload: IndexRequest) -> IndexResponse:
 
 
 @app.post("/analyze/insights", response_model=InsightsResponse)
-def analyze_insights(payload: InsightsRequest) -> InsightsResponse:
+def analyze_insights(payload: InsightsRequest, request: Request) -> InsightsResponse:
     record = _require_record(payload.repo_id)
     if record.insights is not None and not payload.force_regenerate:
         return InsightsResponse(
             repo_id=record.repo_id, repo_name=record.repo_name, insights=record.insights
         )
 
+    client_key, ip_key, _ = _charge(request, "insights")
     try:
         generated = insights_service.generate(record)
     except ValueError as exc:
+        _refund(client_key, ip_key, "insights")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        _refund(client_key, ip_key, "insights")
+        raise
 
     with analysis_store.lock():
         latest = _require_record(record.repo_id)
@@ -263,13 +315,16 @@ def get_insights(repo_id: str | None = Query(default=None)) -> InsightsResponse:
 
 
 @app.post("/ask", response_model=AskResponse)
-def ask_repo(payload: AskRequest) -> AskResponse:
+def ask_repo(payload: AskRequest, request: Request) -> AskResponse:
     record = _require_record(payload.repo_id)
+    client_key, ip_key, _ = _charge(request, "ask")
     try:
         return qa_service.ask(record, payload.question, payload.top_k)
     except ValueError as exc:
+        _refund(client_key, ip_key, "ask")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        _refund(client_key, ip_key, "ask")
         raise HTTPException(status_code=500, detail=f"Question answering failed: {exc}") from exc
 
 

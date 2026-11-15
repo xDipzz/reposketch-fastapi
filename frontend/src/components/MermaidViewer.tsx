@@ -29,33 +29,33 @@ export function MermaidViewer({
         const mermaid = (await import("mermaid")).default;
         const palette = dark
           ? {
-              background: "#1f2227",
-              primaryColor: "#1e2d44",
-              primaryTextColor: "#e7ebf0",
-              primaryBorderColor: "#5b8def",
-              secondaryColor: "#252a31",
-              tertiaryColor: "#2b3139",
-              lineColor: "#4a515c",
-              textColor: "#e7ebf0",
-              mainBkg: "#23272e",
-              nodeBorder: "#4a515c",
-              clusterBkg: "#252a31",
+              background: "#101215",
+              primaryColor: "#242830",
+              primaryTextColor: "#e8ebef",
+              primaryBorderColor: "#9aa6b5",
+              secondaryColor: "#1b1e24",
+              tertiaryColor: "#20242b",
+              lineColor: "#5c6673",
+              textColor: "#e8ebef",
+              mainBkg: "#171a1f",
+              nodeBorder: "#596370",
+              clusterBkg: "#15181d",
               clusterBorder: "#343a43",
-              edgeLabelBackground: "#1f2227"
+              edgeLabelBackground: "#101215"
             }
           : {
               background: "#ffffff",
-              primaryColor: "#eaf2ff",
-              primaryTextColor: "#1f2937",
-              primaryBorderColor: "#3b82f6",
-              secondaryColor: "#f5f7fa",
-              tertiaryColor: "#eef2f7",
-              lineColor: "#cbd5e1",
-              textColor: "#1f2937",
+              primaryColor: "#eef2f6",
+              primaryTextColor: "#1b1f26",
+              primaryBorderColor: "#8794a3",
+              secondaryColor: "#f4f6f8",
+              tertiaryColor: "#e9edf1",
+              lineColor: "#b7c0ca",
+              textColor: "#1b1f26",
               mainBkg: "#ffffff",
-              nodeBorder: "#cbd5e1",
-              clusterBkg: "#f5f7fa",
-              clusterBorder: "#e2e8f0",
+              nodeBorder: "#aeb8c4",
+              clusterBkg: "#f4f6f8",
+              clusterBorder: "#d7dde3",
               edgeLabelBackground: "#ffffff"
             };
 

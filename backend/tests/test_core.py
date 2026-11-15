@@ -6,6 +6,7 @@ from pathlib import Path
 
 from app.config import Settings
 from app.services.local_embeddings import LocalHashEmbeddings
+from app.services.usage_service import UsageLimitError, UsageService
 from app.services.vector_store import ChunkRecord, VectorStore
 
 
@@ -82,6 +83,45 @@ class VectorStoreTests(unittest.TestCase):
         self.assertIsNotNone(self.store.get_collection("delete_me"))
         self.store.delete_collection("delete_me")
         self.assertIsNone(self.store.get_collection("delete_me"))
+
+
+class UsageServiceTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        settings = Settings(
+            analysis_storage_dir=Path(self.temp_dir.name) / "analysis",
+            repo_storage_dir=Path(self.temp_dir.name) / "repos",
+            vector_store_dir=Path(self.temp_dir.name) / "vectors",
+            daily_credit_limit=100,
+            ip_daily_credit_limit=300,
+        )
+        self.usage = UsageService(settings)
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def test_daily_limit_and_refund(self) -> None:
+        client_key, ip_key = self.usage.identify(
+            {"x-client-id": "visitor-test-123"}, "127.0.0.1"
+        )
+        initial = self.usage.snapshot(client_key, ip_key)
+        self.assertEqual(initial.used, 0)
+        self.assertEqual(initial.limit, 100)
+
+        for _ in range(50):
+            snapshot = self.usage.consume(client_key, ip_key, "ask")
+        self.assertEqual(snapshot.remaining, 0)
+
+        with self.assertRaises(UsageLimitError):
+            self.usage.consume(client_key, ip_key, "ask")
+
+        self.usage.refund(client_key, ip_key, "ask")
+        refreshed = self.usage.snapshot(client_key, ip_key)
+        self.assertEqual(refreshed.remaining, 2)
+
+    def test_invalid_client_id_falls_back_to_ip(self) -> None:
+        client_key, ip_key = self.usage.identify({"x-client-id": "../bad"}, "10.0.0.1")
+        self.assertEqual(client_key, ip_key)
 
 
 class ApiSmokeTests(unittest.TestCase):

@@ -45,6 +45,21 @@ export const apiClient = axios.create({
   timeout: 60_000
 });
 
+const CLIENT_ID_KEY = "reposketch-client-id";
+
+function getClientId() {
+  if (typeof window === "undefined") return "server";
+  const stored = localStorage.getItem(CLIENT_ID_KEY);
+  if (stored) return stored;
+  const generated =
+    globalThis.crypto?.randomUUID?.() ??
+    `visitor-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  localStorage.setItem(CLIENT_ID_KEY, generated);
+  return generated;
+}
+
+apiClient.defaults.headers.common["X-Client-ID"] = getClientId();
+
 export type Diagram = {
   id: string;
   title: string;
@@ -165,6 +180,20 @@ export type Health = {
   uptime_seconds: number;
 };
 
+export type UsageAction = {
+  action: string;
+  label: string;
+  cost: number;
+};
+
+export type Usage = {
+  limit: number;
+  used: number;
+  remaining: number;
+  reset_at: string;
+  costs: UsageAction[];
+};
+
 export async function loadRepository(repoUrl: string) {
   const { data } = await apiClient.post(
     "/analyze/repo-load",
@@ -223,6 +252,11 @@ export async function fetchHealth() {
   return data as Health;
 }
 
+export async function fetchUsage() {
+  const { data } = await apiClient.get("/usage");
+  return data as Usage;
+}
+
 export async function deleteRepository(repoId: string) {
   const { data } = await apiClient.delete(`/analyze/repository/${repoId}`);
   return data as { status: string; repo_id: string };
@@ -241,7 +275,7 @@ export function extractApiError(error: unknown) {
   if (axios.isAxiosError(error)) {
     const detail = error.response?.data?.detail;
     if (typeof detail === "string" && detail.trim()) {
-      return detail;
+      return sanitizeProvider(detail);
     }
     if (Array.isArray(detail)) {
       return detail
@@ -251,7 +285,17 @@ export function extractApiError(error: unknown) {
     if (error.code === "ECONNABORTED") {
       return "The request timed out. The backend may still be waking up — try again.";
     }
-    return error.message;
+    return sanitizeProvider(error.message);
   }
   return "Something went wrong while talking to the backend.";
+}
+
+function sanitizeProvider(message: string) {
+  return message
+    .replaceAll("GEMINI_API_KEY", "AI provider key")
+    .replaceAll("GEMINI", "AI provider")
+    .replaceAll("Gemini", "AI service")
+    .replaceAll("gemini", "AI service")
+    .replaceAll("OpenAI", "AI provider")
+    .replaceAll("OPENAI_API_KEY", "AI provider key");
 }

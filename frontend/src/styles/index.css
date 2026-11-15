@@ -4,10 +4,45 @@
 
 :root {
   color-scheme: light;
+  --page: oklch(0.955 0.002 260);
+  --canvas: oklch(0.925 0.003 260);
+  --surface: oklch(0.995 0.001 260);
+  --inset: oklch(0.938 0.003 260);
+  --hover: oklch(0.91 0.004 260);
+  --hover-2: oklch(0.87 0.005 260);
+  --ink: oklch(0.22 0.006 260);
+  --ink-2: oklch(0.48 0.008 260);
+  --ink-3: oklch(0.66 0.008 260);
+  --line: oklch(0.88 0.005 260);
+  --line-strong: oklch(0.78 0.008 260);
+  --accent: oklch(0.55 0.06 250);
+  --accent-ink: oklch(0.44 0.06 250);
+  --accent-tint: oklch(0.55 0.06 250 / 0.1);
+  --metal-sheen: linear-gradient(135deg, oklch(1 0 0 / 0.5), transparent 22%, oklch(1 0 0 / 0.12) 48%, transparent 72%);
+  --metal-brush: repeating-linear-gradient(115deg, oklch(1 0 0 / 0.025) 0, oklch(1 0 0 / 0.025) 1px, transparent 1px, transparent 5px);
+  --metal-edge: oklch(1 0 0 / 0.9);
 }
 
 .dark {
   color-scheme: dark;
+  --page: oklch(0.135 0.004 264);
+  --canvas: oklch(0.165 0.004 264);
+  --surface: oklch(0.198 0.005 264);
+  --inset: oklch(0.16 0.004 264);
+  --hover: oklch(0.25 0.006 264);
+  --hover-2: oklch(0.29 0.007 264);
+  --field: oklch(0.225 0.005 264);
+  --ink: oklch(0.955 0.002 250);
+  --ink-2: oklch(0.75 0.007 250);
+  --ink-3: oklch(0.55 0.008 250);
+  --line: oklch(0.3 0.006 264);
+  --line-strong: oklch(0.42 0.008 264);
+  --accent: oklch(0.76 0.045 250);
+  --accent-ink: oklch(0.87 0.03 250);
+  --accent-tint: oklch(0.76 0.045 250 / 0.14);
+  --metal-sheen: linear-gradient(135deg, oklch(1 0 0 / 0.11), transparent 20%, oklch(1 0 0 / 0.025) 48%, transparent 74%);
+  --metal-brush: repeating-linear-gradient(115deg, oklch(1 0 0 / 0.018) 0, oklch(1 0 0 / 0.018) 1px, transparent 1px, transparent 5px);
+  --metal-edge: oklch(1 0 0 / 0.2);
 }
 
 html,
@@ -21,9 +56,37 @@ body {
   min-width: 320px;
   background-color: var(--page);
   background-image:
-    radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 34rem),
-    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--green) 6%, transparent), transparent 26rem);
+    radial-gradient(ellipse at 50% -18%, color-mix(in srgb, white 10%, transparent), transparent 55%),
+    radial-gradient(ellipse at 90% 8%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 42%),
+    linear-gradient(135deg, color-mix(in srgb, var(--page) 92%, black) 0%, var(--page) 46%, color-mix(in srgb, var(--page) 95%, white) 100%);
   background-attachment: fixed;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  background-image: repeating-linear-gradient(
+    115deg,
+    oklch(1 0 0 / 0.012) 0,
+    oklch(1 0 0 / 0.012) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+:root:not(.dark) body::before {
+  opacity: 0.18;
+  mix-blend-mode: multiply;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 button,
@@ -40,11 +103,27 @@ textarea {
 }
 
 .app-sidebar {
+  position: sticky;
+  top: 0;
   width: 240px;
+  height: 100vh;
+  max-height: 100vh;
   flex: 0 0 240px;
-  border-right: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: blur(18px);
+  overflow: hidden;
+  border-right: 1px solid color-mix(in srgb, var(--metal-edge) 55%, var(--line));
+  background:
+    var(--metal-brush),
+    var(--metal-sheen),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 74%, transparent), color-mix(in srgb, var(--page) 94%, transparent));
+  box-shadow: inset -1px 0 0 oklch(0 0 0 / 0.28), 18px 0 60px -52px oklch(0 0 0 / 0.9);
+  backdrop-filter: blur(20px) saturate(115%);
+}
+
+.app-main > header {
+  background:
+    var(--metal-sheen),
+    color-mix(in srgb, var(--page) 84%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--metal-edge) 45%, var(--line));
 }
 
 .app-main {
@@ -64,12 +143,27 @@ textarea {
 .hero-surface {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--metal-edge) 50%, var(--line));
   border-radius: 18px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--accent-tint) 46%, var(--surface))),
-    var(--surface);
-  box-shadow: var(--shadow-card);
+    var(--metal-brush),
+    var(--metal-sheen),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 92%, white 8%) 0%, var(--surface) 34%, color-mix(in srgb, var(--surface) 96%, black 4%) 100%);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.18),
+    inset 0 -1px 0 oklch(0 0 0 / 0.28),
+    0 28px 80px -46px oklch(0 0 0 / 0.95);
+}
+
+.hero-surface::before,
+.panel::before,
+.stat-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.4), transparent);
 }
 
 .hero-surface::after {
@@ -91,10 +185,17 @@ textarea {
 }
 
 .panel {
-  border: 1px solid var(--line);
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--metal-edge) 34%, var(--line));
   border-radius: 14px;
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
+  background:
+    var(--metal-brush),
+    var(--metal-sheen),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 94%, white 6%) 0%, var(--surface) 32%, color-mix(in srgb, var(--surface) 97%, black 3%) 100%);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.13),
+    inset 0 -1px 0 oklch(0 0 0 / 0.24),
+    0 18px 55px -38px oklch(0 0 0 / 0.92);
 }
 
 .panel-soft {
@@ -110,7 +211,8 @@ textarea {
   justify-content: space-between;
   gap: 10px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid color-mix(in srgb, var(--metal-edge) 32%, var(--line));
+  background: linear-gradient(180deg, oklch(1 0 0 / 0.022), transparent);
 }
 
 .kicker {
@@ -130,12 +232,19 @@ textarea {
 }
 
 .stat-card {
+  position: relative;
   min-width: 0;
-  border: 1px solid var(--line);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--metal-edge) 32%, var(--line));
   border-radius: 12px;
-  background: var(--surface);
+  background:
+    var(--metal-brush),
+    var(--metal-sheen),
+    linear-gradient(150deg, color-mix(in srgb, var(--surface) 92%, white 8%), var(--surface) 52%, color-mix(in srgb, var(--surface) 96%, black 4%));
   padding: 14px;
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.13),
+    0 14px 40px -32px oklch(0 0 0 / 0.9);
 }
 
 .stat-value {
@@ -281,11 +390,12 @@ textarea {
 
 .diagram-stage {
   overflow: auto;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--metal-edge) 34%, var(--line));
   border-radius: 12px;
   background:
-    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent-tint) 72%, transparent), transparent 28rem),
-    var(--surface);
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent-tint) 64%, transparent), transparent 28rem),
+    linear-gradient(150deg, color-mix(in srgb, var(--surface) 94%, white 6%), var(--surface) 50%, color-mix(in srgb, var(--surface) 97%, black 3%));
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.1);
   padding: 18px;
 }
 
@@ -318,14 +428,36 @@ textarea {
 }
 
 .history-row.is-active {
-  background: var(--hover-2);
+  background:
+    linear-gradient(100deg, oklch(1 0 0 / 0.07), transparent 65%),
+    var(--hover-2);
+  box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.05);
 }
 
 .text-gradient {
-  background: linear-gradient(90deg, var(--ink) 0%, var(--accent-ink) 55%, var(--ink) 100%);
+  background: linear-gradient(100deg, var(--ink) 0%, oklch(1 0 0 / 0.98) 28%, var(--ink-2) 52%, var(--ink) 78%, oklch(1 0 0 / 0.9) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+  text-shadow: 0 0 24px oklch(1 0 0 / 0.08);
+}
+
+.app-shell button.bg-ink {
+  background-image: linear-gradient(180deg, #ffffff 0%, #dfe3e8 42%, #b8bec7 100%);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.95),
+    inset 0 -1px 0 oklch(0 0 0 / 0.28),
+    0 1px 0 oklch(0 0 0 / 0.55),
+    0 12px 32px -24px oklch(1 0 0 / 0.75);
+}
+
+:root:not(.dark) .app-shell button.bg-ink {
+  background-image: linear-gradient(180deg, #3c424b 0%, #20242a 44%, #0b0d10 100%);
+  color: #f7f8fa;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.2),
+    0 1px 0 oklch(0 0 0 / 0.4),
+    0 12px 30px -24px oklch(0 0 0 / 0.8);
 }
 
 @media (max-width: 1023px) {

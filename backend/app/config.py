@@ -98,6 +98,10 @@ class Settings(BaseModel):
         )
     )
     max_index_chunks: int = Field(default=int(os.getenv("MAX_INDEX_CHUNKS", "1200")))
+    daily_credit_limit: int = Field(default=int(os.getenv("DAILY_CREDIT_LIMIT", "100")))
+    ip_daily_credit_limit: int = Field(
+        default=int(os.getenv("IP_DAILY_CREDIT_LIMIT", "300"))
+    )
     embedding_batch_size: int = Field(
         default=max(1, min(100, int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))))
     )

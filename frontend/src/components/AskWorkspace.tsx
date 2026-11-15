@@ -85,7 +85,7 @@ export function AskWorkspace({
             >
               {indexState.status === "ready" ? "Index ready" : indexState.status}
             </StatusPill>
-            <Chip tone="accent">{latest?.provider ?? "gemini"}</Chip>
+            <Chip tone="accent">grounded</Chip>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ export function AskWorkspace({
             <ol className="mt-3 space-y-3">
               {[
                 ["Retrieve", "The question is matched against indexed code chunks."],
-                ["Ground", "Gemini receives only the retrieved context, never the open web."],
+                ["Ground", "The AI receives only the retrieved context, never the open web."],
                 ["Cite", "Every answer returns source files, symbols, and chunk previews."]
               ].map(([title, body], index) => (
                 <li key={title} className="flex gap-2.5">
@@ -276,7 +276,7 @@ function ChatTurnView({ turn }: { turn: ChatTurn }) {
             <div className="rounded-[12px] border border-line bg-surface p-3.5 shadow-card">
               <div className="flex items-center gap-2 text-[12px] text-ink-2">
                 <Icon name="loader" size={14} className="animate-spin text-accent" />
-                Retrieving context and asking Gemini...
+                Retrieving context and asking the AI...
               </div>
               <div className="mt-3 space-y-2">
                 <div className="h-2 w-11/12 animate-pulse rounded-full bg-inset" />

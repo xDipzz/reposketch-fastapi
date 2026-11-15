@@ -34,6 +34,10 @@ services:
         value: changes.md,changelog.md,changes.rst,license,license.txt,license.md,notice
       - key: INDEX_EMBEDDING_PROVIDER
         value: local
+      - key: DAILY_CREDIT_LIMIT
+        value: 100
+      - key: IP_DAILY_CREDIT_LIMIT
+        value: 300
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL

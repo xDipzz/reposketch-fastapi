@@ -86,7 +86,7 @@ export function BriefingWorkspace({
       status: indexState.status === "ready" ? ("done" as const) : ("running" as const),
       step: 2,
       details: [
-        { label: "Provider", meta: indexState.provider ?? "local" },
+        { label: "Index", meta: indexState.provider ?? "local" },
         { label: "Status", meta: indexState.message }
       ]
     },
@@ -97,7 +97,7 @@ export function BriefingWorkspace({
       status: insights ? ("done" as const) : insightsLoading ? ("running" as const) : ("pending" as const),
       step: 3,
       details: [
-        { label: "Model", meta: insights?.model ?? "Gemini 3.5 Flash Lite" },
+        { label: "Briefing", meta: insights ? "cached" : "not generated" },
         { label: "Suggested questions", meta: String(insights?.suggested_questions.length ?? 0) }
       ]
     }

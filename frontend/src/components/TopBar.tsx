@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import type { Usage } from "@/api/client";
 import { Button } from "@/components/atoms/Button";
 import { Icon } from "@/components/icons/Icons";
 import type { WorkspaceView } from "@/components/AppSidebar";
+import { UsagePill } from "@/components/UsageMeter";
 import { cn } from "@/lib/utils";
 
 const VIEW_LABELS: Record<WorkspaceView, string> = {
@@ -14,6 +16,7 @@ export function TopBar({
   activeView,
   repoName,
   repoUrl,
+  usage,
   loading,
   dark,
   onToggleTheme,
@@ -24,6 +27,7 @@ export function TopBar({
   activeView: WorkspaceView;
   repoName: string | null;
   repoUrl: string;
+  usage: Usage | null;
   loading: boolean;
   dark: boolean;
   onToggleTheme: () => void;
@@ -84,6 +88,8 @@ export function TopBar({
             </Button>
           </form>
 
+          <UsagePill usage={usage} className="hidden sm:inline-flex" />
+
           <button
             type="button"
             onClick={onToggleTheme}
@@ -123,6 +129,7 @@ export function TopBar({
             {VIEW_LABELS[view]}
           </button>
         ))}
+        <UsagePill usage={usage} className="ml-auto shrink-0" />
       </div>
     </header>
   );

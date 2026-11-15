@@ -12,7 +12,7 @@ const SAMPLES = [
 
 const CAPABILITIES = [
   { icon: "network" as const, label: "AST + dependency map" },
-  { icon: "sparkles" as const, label: "Free Gemini briefing" },
+  { icon: "sparkles" as const, label: "AI architecture briefing" },
   { icon: "database" as const, label: "Grounded file Q&A" }
 ];
 
@@ -36,7 +36,7 @@ export function RepoInput({
         <div className="flex flex-wrap items-center justify-center gap-2">
           <span className="kicker">
             <span className="size-1.5 rounded-full bg-green" />
-            Free AI · Gemini 3.5 Flash Lite
+            Repository intelligence
           </span>
           <StatusPill tone={indexStatus === "ready" ? "green" : indexStatus === "error" ? "red" : "neutral"}>
             {indexStatus === "idle" ? "Ready to analyze" : indexStatus}
@@ -49,7 +49,7 @@ export function RepoInput({
         </h1>
         <p className="mt-4 max-w-xl text-[14px] leading-6 text-ink-2 md:text-[15px]">
           Paste a GitHub URL. RepoSketch clones it, maps the architecture, indexes the code,
-          and answers questions with exact file references — powered by a free Gemini key.
+          and answers questions with exact file references — with no billing setup required.
         </p>
 
         <form
@@ -164,7 +164,7 @@ export function RepoInput({
           <div className="mt-3 rounded-[9px] border border-line bg-inset/60 p-3">
             <div className="flex items-center gap-1.5">
               <span className="rounded-[4px] bg-accent-tint px-1.5 py-0.5 font-mono text-[8px] text-accent-ink">
-                gemini-3.5-flash-lite
+                AI briefing
               </span>
               <span className="text-[8px] text-ink-3">cached</span>
             </div>

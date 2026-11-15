@@ -6,18 +6,18 @@ import {
   extractApiError,
   fetchCachedInsights,
   fetchDiagrams,
-  fetchHealth,
   fetchInsights,
   fetchRepositories,
   fetchSummary,
+  fetchUsage,
   indexRepository,
   loadRepository,
   type AskResponse,
   type Diagram,
-  type Health,
   type RepoHistoryItem,
   type RepoInsights,
-  type Summary
+  type Summary,
+  type Usage
 } from "@/api/client";
 import { AppSidebar, type WorkspaceView } from "@/components/AppSidebar";
 import { ArchitectureWorkspace } from "@/components/ArchitectureWorkspace";
@@ -50,7 +50,7 @@ export default function App() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [diagrams, setDiagrams] = useState<Diagram[]>([]);
   const [history, setHistory] = useState<RepoHistoryItem[]>([]);
-  const [health, setHealth] = useState<Health | null>(null);
+  const [usage, setUsage] = useState<Usage | null>(null);
   const [insights, setInsights] = useState<RepoInsights | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
@@ -85,10 +85,18 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  const refreshUsage = useCallback(async () => {
+    try {
+      setUsage(await fetchUsage());
+    } catch {
+      // Usage is a non-critical sidebar panel.
+    }
+  }, []);
+
   useEffect(() => {
-    fetchHealth().then(setHealth).catch(() => setHealth(null));
+    void refreshUsage();
     void refreshHistory();
-  }, [refreshHistory]);
+  }, [refreshHistory, refreshUsage]);
 
   const navigate = (next: WorkspaceView) => {
     startTransition(() => setView(next));
@@ -168,7 +176,10 @@ export default function App() {
           setInsightsError(extractApiError(insightError));
         }
       } finally {
-        if (run === runRef.current) setInsightsLoading(false);
+        if (run === runRef.current) {
+          setInsightsLoading(false);
+          void refreshUsage();
+        }
       }
 
       try {
@@ -195,13 +206,17 @@ export default function App() {
         });
         setStatusText(`Repository analyzed: ${loaded.summary.repo_name}. Q&A indexing is unavailable.`);
       } finally {
-        if (run === runRef.current) void refreshHistory();
+        if (run === runRef.current) {
+          void refreshHistory();
+          void refreshUsage();
+        }
       }
     } catch (loadError) {
       if (run !== runRef.current) return;
       setError(extractApiError(loadError));
       setStatusText(null);
       setLoadingRepo(false);
+      void refreshUsage();
     }
   };
 
@@ -293,6 +308,7 @@ export default function App() {
       setInsightsError(extractApiError(insightError));
     } finally {
       setInsightsLoading(false);
+      void refreshUsage();
     }
   };
 
@@ -332,6 +348,7 @@ export default function App() {
       );
     } finally {
       setAsking(false);
+      void refreshUsage();
     }
   };
 
@@ -346,7 +363,7 @@ export default function App() {
         activeView={view}
         history={history}
         activeRepoId={activeRepoId}
-        health={health}
+        usage={usage}
         indexStatus={indexState.status}
         onNavigate={navigate}
         onSelectRepo={(repoId) => void handleSelectRepo(repoId)}
@@ -359,6 +376,7 @@ export default function App() {
           activeView={view}
           repoName={activeRepoName}
           repoUrl={repoUrl}
+          usage={usage}
           loading={loadingRepo}
           dark={dark}
           onToggleTheme={() => setDark((current) => !current)}
@@ -444,7 +462,7 @@ export default function App() {
               activeView={view}
               history={history}
               activeRepoId={activeRepoId}
-              health={health}
+              usage={usage}
               indexStatus={indexState.status}
               onNavigate={navigate}
               onSelectRepo={(repoId) => void handleSelectRepo(repoId)}

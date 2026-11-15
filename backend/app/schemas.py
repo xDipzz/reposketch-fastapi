@@ -223,6 +223,20 @@ class DeleteResponse(BaseModel):
     repo_id: str
 
 
+class UsageAction(BaseModel):
+    action: str
+    label: str
+    cost: int
+
+
+class UsageResponse(BaseModel):
+    limit: int = 100
+    used: int = 0
+    remaining: int = 100
+    reset_at: datetime
+    costs: list[UsageAction] = Field(default_factory=list)
+
+
 class AnalysisRecord(BaseModel):
     repo_id: str
     repo_name: str
