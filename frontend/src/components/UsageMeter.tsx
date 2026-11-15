@@ -1,5 +1,4 @@
 import type { Usage } from "@/api/client";
-import { ProgressRing } from "@/components/atoms/ProgressRing";
 import { Icon } from "@/components/icons/Icons";
 import { cn } from "@/lib/utils";
 
@@ -120,19 +119,5 @@ export function UsageCard({ usage }: { usage: Usage | null }) {
         </ul>
       </details>
     </section>
-  );
-}
-
-export function UsageRing({ usage }: { usage: Usage | null }) {
-  if (!usage) return null;
-  const progress = usage.limit > 0 ? usage.remaining / usage.limit : 0;
-  return (
-    <ProgressRing
-      progress={progress}
-      tone={usage.remaining <= 0 ? "red" : usage.remaining <= 20 ? "orange" : "accent"}
-      size={24}
-    >
-      {usage.remaining}
-    </ProgressRing>
   );
 }
