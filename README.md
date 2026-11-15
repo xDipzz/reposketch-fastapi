@@ -129,6 +129,8 @@ npm run build
 | `MAX_REPO_FILES` | `4000` | Reject larger repos |
 | `MAX_REPO_SIZE_MB` | `400` | Reject larger clones |
 | `MAX_INDEX_CHUNKS` | `1200` | Retrieval index cap |
+| `DAILY_CREDIT_LIMIT` | `100` | Daily credits per browser/visitor |
+| `IP_DAILY_CREDIT_LIMIT` | `300` | IP-level backstop per day |
 | `INDEX_EMBEDDING_PROVIDER` | `local` | `local` (free/reliable) or `gemini` |
 | `GEMINI_API_KEY` | empty | Required for briefing + Q&A |
 | `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Free-tier chat model |
