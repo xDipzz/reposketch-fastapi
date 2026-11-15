@@ -9,10 +9,22 @@ class HealthResponse(BaseModel):
     status: str = "ok"
     app_name: str
     environment: str
+    version: str = "1.1.0"
+    ai_configured: bool = False
+    ai_model: str = ""
+    embedding_model: str = ""
+    embedding_provider: str = "local"
+    vector_store: str = "sqlite"
+    uptime_seconds: int = 0
 
 
 class RepoLoadRequest(BaseModel):
-    repo_url: str = Field(..., examples=["https://github.com/tiangolo/fastapi"])
+    repo_url: str = Field(
+        ...,
+        min_length=8,
+        max_length=500,
+        examples=["https://github.com/tiangolo/fastapi"],
+    )
 
 
 class ImportStatement(BaseModel):
@@ -68,6 +80,21 @@ class RepoMetadata(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class RepoMetadataPublic(BaseModel):
+    """Compact metadata returned to browsers; the full record stays server-side."""
+
+    repo_id: str
+    repo_name: str
+    repo_url: str
+    loaded_at: datetime
+    detected_framework: str | None = None
+    file_count: int = 0
+    indexed_file_count: int = 0
+    total_classes: int = 0
+    total_functions: int = 0
+    warnings: list[str] = Field(default_factory=list)
+
+
 class RepoSummaryResponse(BaseModel):
     repo_id: str
     repo_name: str
@@ -93,7 +120,7 @@ class DiagramData(BaseModel):
 
 
 class RepoLoadResponse(BaseModel):
-    metadata: RepoMetadata
+    metadata: RepoMetadataPublic
     summary: RepoSummaryResponse
     diagrams: list[DiagramData] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
@@ -118,10 +145,13 @@ class IndexResponse(BaseModel):
     indexed_chunks: int
     status: str
     indexed_at: datetime
+    embedding_provider: str = "gemini"
+    embedding_model: str = ""
+    warnings: list[str] = Field(default_factory=list)
 
 
 class AskRequest(BaseModel):
-    question: str
+    question: str = Field(..., min_length=2, max_length=2000)
     repo_id: str | None = None
     top_k: int = Field(default=6, ge=1, le=12)
 
@@ -142,9 +172,55 @@ class ChunkPreview(BaseModel):
 class AskResponse(BaseModel):
     repo_id: str
     repo_name: str
+    question: str = ""
     answer: str
     sources: list[SourceReference] = Field(default_factory=list)
     retrieved_chunks: list[ChunkPreview] = Field(default_factory=list)
+    provider: str = "gemini"
+
+
+class RepoInsights(BaseModel):
+    overview: str = ""
+    architecture: str = ""
+    onboarding: str = ""
+    entry_points: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    suggested_questions: list[str] = Field(default_factory=list)
+    generated_at: datetime | None = None
+    model: str = ""
+
+
+class InsightsRequest(BaseModel):
+    repo_id: str | None = None
+    force_regenerate: bool = False
+
+
+class InsightsResponse(BaseModel):
+    repo_id: str
+    repo_name: str
+    insights: RepoInsights | None = None
+
+
+class RepoHistoryItem(BaseModel):
+    repo_id: str
+    repo_name: str
+    repo_url: str
+    loaded_at: datetime
+    detected_framework: str | None = None
+    file_count: int = 0
+    indexed_file_count: int = 0
+    indexed_chunks: int = 0
+    has_insights: bool = False
+    embedding_provider: str | None = None
+
+
+class RepoHistoryResponse(BaseModel):
+    repositories: list[RepoHistoryItem] = Field(default_factory=list)
+
+
+class DeleteResponse(BaseModel):
+    status: str = "deleted"
+    repo_id: str
 
 
 class AnalysisRecord(BaseModel):
@@ -158,3 +234,6 @@ class AnalysisRecord(BaseModel):
     indexed_at: datetime | None = None
     indexed_files: int | None = None
     indexed_chunks: int | None = None
+    embedding_provider: str | None = None
+    embedding_model: str | None = None
+    insights: RepoInsights | None = None

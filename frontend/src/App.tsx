@@ -1,267 +1,405 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   askRepository,
+  deleteRepository,
   extractApiError,
+  fetchCachedInsights,
   fetchDiagrams,
+  fetchHealth,
+  fetchInsights,
+  fetchRepositories,
   fetchSummary,
   indexRepository,
   loadRepository,
   type AskResponse,
   type Diagram,
+  type Health,
+  type RepoHistoryItem,
+  type RepoInsights,
   type Summary
-} from "./api/client";
-import { ArchitectureWorkspace } from "./components/ArchitectureWorkspace";
-import { InterrogateWorkspace } from "./components/InterrogateWorkspace";
-import { OverviewWorkspace } from "./components/OverviewWorkspace";
-import { WorkspaceNav, type WorkspaceView } from "./components/WorkspaceNav";
+} from "@/api/client";
+import { AppSidebar, type WorkspaceView } from "@/components/AppSidebar";
+import { ArchitectureWorkspace } from "@/components/ArchitectureWorkspace";
+import { AskWorkspace, type ChatTurn } from "@/components/AskWorkspace";
+import { BriefingWorkspace, type IndexState } from "@/components/BriefingWorkspace";
+import { TopBar } from "@/components/TopBar";
+import { Icon } from "@/components/icons/Icons";
 
-type IndexState = {
-  status: "idle" | "indexing" | "ready" | "error";
-  message: string | null;
-};
-
-function getInitialView(): WorkspaceView {
-  if (typeof window === "undefined") {
-    return "briefing";
-  }
-
+function parseView(): WorkspaceView {
   const hash = window.location.hash.replace("#", "");
-  if (hash === "briefing" || hash === "architecture" || hash === "interrogate") {
-    return hash;
-  }
+  if (hash === "architecture") return "architecture";
+  if (hash === "ask" || hash === "interrogate") return "ask";
   return "briefing";
 }
 
+const INITIAL_INDEX_STATE: IndexState = {
+  status: "idle",
+  message: "Repo Q&A becomes available after indexing finishes."
+};
+
 export default function App() {
-  const [view, setView] = useState<WorkspaceView>(getInitialView);
+  const [view, setView] = useState<WorkspaceView>(parseView);
+  const [dark, setDark] = useState(() => {
+    const stored = localStorage.getItem("reposketch-theme");
+    if (stored) return stored === "dark";
+    return true;
+  });
   const [repoUrl, setRepoUrl] = useState("");
-  const [repoId, setRepoId] = useState<string | null>(null);
+  const [activeRepoId, setActiveRepoId] = useState<string | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [diagrams, setDiagrams] = useState<Diagram[]>([]);
-  const [answer, setAnswer] = useState<AskResponse | null>(null);
+  const [history, setHistory] = useState<RepoHistoryItem[]>([]);
+  const [health, setHealth] = useState<Health | null>(null);
+  const [insights, setInsights] = useState<RepoInsights | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [indexState, setIndexState] = useState<IndexState>(INITIAL_INDEX_STATE);
   const [loadingRepo, setLoadingRepo] = useState(false);
-  const [asking, setAsking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [askError, setAskError] = useState<string | null>(null);
   const [statusText, setStatusText] = useState<string | null>(null);
-  const [indexState, setIndexState] = useState<IndexState>({
-    status: "idle",
-    message: "Repo Q&A becomes available after indexing finishes."
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
+  const [asking, setAsking] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const runRef = useRef(0);
+  const autoOpenedRef = useRef(false);
 
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace("#", "");
-      if (hash === "briefing" || hash === "architecture" || hash === "interrogate") {
-        setView(hash);
-      }
-    };
-
-    window.addEventListener("hashchange", handleHashChange);
-    return () => {
-      window.removeEventListener("hashchange", handleHashChange);
-    };
+  const refreshHistory = useCallback(async () => {
+    try {
+      setHistory(await fetchRepositories());
+    } catch {
+      // The sidebar is non-critical; the main workspace still works.
+    }
   }, []);
 
-  const handleViewChange = (nextView: WorkspaceView) => {
-    startTransition(() => {
-      setView(nextView);
-    });
-    window.history.replaceState(null, "", `#${nextView}`);
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    localStorage.setItem("reposketch-theme", dark ? "dark" : "light");
+  }, [dark]);
+
+  useEffect(() => {
+    const onHashChange = () => setView(parseView());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  useEffect(() => {
+    fetchHealth().then(setHealth).catch(() => setHealth(null));
+    void refreshHistory();
+  }, [refreshHistory]);
+
+  const navigate = (next: WorkspaceView) => {
+    startTransition(() => setView(next));
+    window.history.replaceState(null, "", `#${next}`);
+    setSidebarOpen(false);
   };
 
-  const handleAnalyze = async (urlToAnalyze?: string) => {
-    const targetUrl = urlToAnalyze ?? repoUrl;
-    if (!targetUrl.trim()) {
-      return;
-    }
-    if (urlToAnalyze && urlToAnalyze !== repoUrl) {
-      setRepoUrl(urlToAnalyze);
-    }
+  const resetWorkspace = () => {
+    runRef.current += 1;
+    localStorage.removeItem("reposketch-active-repo");
+    setActiveRepoId(null);
+    setSummary(null);
+    setDiagrams([]);
+    setInsights(null);
+    setInsightsError(null);
+    setWarnings([]);
+    setError(null);
+    setStatusText(null);
+    setTurns([]);
+    setIndexState(INITIAL_INDEX_STATE);
+  };
+
+  const handleNewAnalysis = () => {
+    resetWorkspace();
+    setRepoUrl("");
+    navigate("briefing");
+  };
+
+  const handleAnalyze = async (url: string) => {
+    const targetUrl = url.trim();
+    if (!targetUrl || loadingRepo) return;
+
+    const run = ++runRef.current;
+    setLoadingRepo(true);
+    setError(null);
+    setStatusText("Cloning the repository and parsing its structure...");
+    setSummary(null);
+    setDiagrams([]);
+    setInsights(null);
+    setInsightsError(null);
+    setWarnings([]);
+    setTurns([]);
+    setActiveRepoId(null);
+    setIndexState(INITIAL_INDEX_STATE);
+    setRepoUrl(targetUrl);
 
     try {
-      setLoadingRepo(true);
-      setError(null);
-      setAskError(null);
-      setAnswer(null);
-      setWarnings([]);
-      setRepoId(null);
-      setStatusText("Cloning the repository and parsing its structure...");
-      setIndexState({
-        status: "idle",
-        message: "Repo Q&A becomes available after indexing finishes."
-      });
+      const loaded = await loadRepository(targetUrl);
+      if (run !== runRef.current) return;
 
-      const loadData = await loadRepository(targetUrl);
-      const nextRepoId = loadData.summary.repo_id;
-      setRepoId(nextRepoId);
-      setWarnings(loadData.warnings.length ? loadData.warnings : loadData.metadata.warnings ?? []);
-
-      const [summaryData, diagramData] = await Promise.all([
-        fetchSummary(nextRepoId),
-        fetchDiagrams(nextRepoId)
-      ]);
-
-      setSummary(summaryData);
-      setDiagrams(diagramData.diagrams);
-      handleViewChange("architecture");
-      setStatusText(`Repository loaded: ${summaryData.repo_name}. Building retrieval index...`);
+      const repoId = loaded.summary.repo_id;
+      localStorage.setItem("reposketch-active-repo", repoId);
+      setActiveRepoId(repoId);
+      setSummary(loaded.summary);
+      setDiagrams(loaded.diagrams);
+      setWarnings(loaded.warnings.length ? loaded.warnings : loaded.metadata.warnings ?? []);
+      setStatusText(`Repository loaded: ${loaded.summary.repo_name}. Building retrieval index...`);
       setIndexState({
         status: "indexing",
-        message: "Indexing repository files for grounded Q&A..."
+        message: "Indexing source files for grounded Q&A..."
       });
+      navigate("architecture");
+      setLoadingRepo(false);
+
+      setInsightsLoading(true);
+      const insightsPromise = fetchInsights(repoId);
+      const indexPromise = indexRepository(repoId);
 
       try {
-        const indexData = await indexRepository(nextRepoId);
-        setSummary((current) =>
-          current
-            ? {
-                ...current,
-                indexed_file_count: indexData.indexed_files
-              }
-            : current
-        );
+        const insightData = await insightsPromise;
+        if (run === runRef.current && insightData.insights) {
+          setInsights(insightData.insights);
+          setInsightsError(null);
+        }
+      } catch (insightError) {
+        if (run === runRef.current) {
+          setInsightsError(extractApiError(insightError));
+        }
+      } finally {
+        if (run === runRef.current) setInsightsLoading(false);
+      }
+
+      try {
+        const indexData = await indexPromise;
+        if (run !== runRef.current) return;
         setIndexState({
           status: "ready",
-          message: `Indexed ${indexData.indexed_files} files into ${indexData.indexed_chunks} chunks.`
+          message: `Indexed ${indexData.indexed_files} files into ${indexData.indexed_chunks} chunks with ${indexData.embedding_provider}.`,
+          provider: indexData.embedding_provider,
+          chunks: indexData.indexed_chunks
         });
-        setStatusText(`Repository loaded and indexed: ${summaryData.repo_name}.`);
+        setSummary((current) =>
+          current ? { ...current, indexed_file_count: indexData.indexed_files } : current
+        );
+        if (indexData.warnings.length) {
+          setWarnings((current) => [...new Set([...current, ...indexData.warnings])]);
+        }
+        setStatusText(`Repository loaded and indexed: ${loaded.summary.repo_name}.`);
       } catch (indexError) {
-        const detail = extractApiError(indexError);
+        if (run !== runRef.current) return;
         setIndexState({
           status: "error",
-          message: detail
+          message: extractApiError(indexError)
         });
-        setStatusText(`Repository analyzed: ${summaryData.repo_name}. Q&A indexing is unavailable.`);
+        setStatusText(`Repository analyzed: ${loaded.summary.repo_name}. Q&A indexing is unavailable.`);
+      } finally {
+        if (run === runRef.current) void refreshHistory();
       }
     } catch (loadError) {
+      if (run !== runRef.current) return;
       setError(extractApiError(loadError));
       setStatusText(null);
-    } finally {
       setLoadingRepo(false);
     }
   };
 
-  const handleAsk = async (question: string) => {
+  const handleSelectRepo = async (repoId: string, navigateOnOpen = true) => {
+    if (repoId === activeRepoId && summary) {
+      setSidebarOpen(false);
+      return;
+    }
+    const item = history.find((entry) => entry.repo_id === repoId);
+    localStorage.setItem("reposketch-active-repo", repoId);
+    setActiveRepoId(repoId);
+    setError(null);
+    setTurns([]);
+    setInsights(null);
+    setInsightsError(null);
+    setLoadingRepo(true);
+    setStatusText(`Loading ${item?.repo_name ?? repoId}...`);
+
     try {
-      setAsking(true);
-      setError(null);
-      setAskError(null);
-      const data = await askRepository(repoId, question);
-      setAnswer(data);
-      handleViewChange("interrogate");
-    } catch (askRequestError) {
-      setAskError(extractApiError(askRequestError));
+      const [summaryData, diagramData, insightData] = await Promise.all([
+        fetchSummary(repoId),
+        fetchDiagrams(repoId),
+        fetchCachedInsights(repoId)
+      ]);
+      setSummary(summaryData);
+      setDiagrams(diagramData.diagrams);
+      setInsights(insightData);
+      setRepoUrl(summaryData.repo_url);
+      setWarnings([]);
+      setIndexState(
+        item && item.indexed_chunks > 0
+          ? {
+              status: "ready",
+              message: `Indexed ${item.indexed_chunks} chunks with ${item.embedding_provider ?? "local-hash"}.`,
+              provider: item.embedding_provider ?? "local-hash",
+              chunks: item.indexed_chunks
+            }
+          : INITIAL_INDEX_STATE
+      );
+      if (navigateOnOpen) {
+        navigate("architecture");
+      } else {
+        setView(parseView());
+      }
+      setStatusText(null);
+    } catch (loadError) {
+      setError(extractApiError(loadError));
+      setSummary(null);
+      setDiagrams([]);
+      await refreshHistory();
+    } finally {
+      setLoadingRepo(false);
+      setSidebarOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (autoOpenedRef.current || activeRepoId || history.length === 0) return;
+    const saved = localStorage.getItem("reposketch-active-repo");
+    const target = history.find((item) => item.repo_id === saved) ?? history[0];
+    if (!target) return;
+    autoOpenedRef.current = true;
+    void handleSelectRepo(target.repo_id, false);
+    // Run once when history first loads; later navigation is user-driven.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, activeRepoId]);
+
+  const handleDeleteRepo = async (repoId: string) => {
+    const item = history.find((entry) => entry.repo_id === repoId);
+    if (!window.confirm(`Remove ${item?.repo_name ?? repoId} and its local index?`)) return;
+    try {
+      await deleteRepository(repoId);
+      if (activeRepoId === repoId) resetWorkspace();
+      await refreshHistory();
+    } catch (deleteError) {
+      setError(extractApiError(deleteError));
+    }
+  };
+
+  const handleGenerateInsights = async () => {
+    if (!activeRepoId || insightsLoading) return;
+    setInsightsLoading(true);
+    setInsightsError(null);
+    try {
+      const data = await fetchInsights(activeRepoId, true);
+      setInsights(data.insights);
+      void refreshHistory();
+    } catch (insightError) {
+      setInsightsError(extractApiError(insightError));
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
+
+  const askDisabledReason = !activeRepoId
+    ? "Analyze a repository first."
+    : indexState.status === "indexing"
+      ? "Indexing is still running."
+      : indexState.status === "error"
+        ? "Q&A is unavailable until indexing succeeds."
+        : indexState.status !== "ready"
+          ? "This repository has no retrieval index yet. Re-analyze or index it first."
+          : null;
+
+  const handleAsk = async (question: string) => {
+    if (!activeRepoId || asking || askDisabledReason) return;
+    const id = `turn-${Date.now()}`;
+    setTurns((current) => [
+      ...current,
+      { id, question, response: null, pending: true, error: null }
+    ]);
+    setAsking(true);
+
+    try {
+      const response = await askRepository(activeRepoId, question);
+      setTurns((current) =>
+        current.map((turn) =>
+          turn.id === id ? { ...turn, response, pending: false, error: null } : turn
+        )
+      );
+      navigate("ask");
+    } catch (askError) {
+      const detail = extractApiError(askError);
+      setTurns((current) =>
+        current.map((turn) =>
+          turn.id === id ? { ...turn, pending: false, error: detail } : turn
+        )
+      );
     } finally {
       setAsking(false);
     }
   };
 
-  const askDisabled = !repoId || loadingRepo || indexState.status !== "ready";
-  const askDisabledReason = !repoId
-    ? "Analyze a repository first."
-    : loadingRepo
-      ? "Wait for analysis to finish."
-      : indexState.status === "indexing"
-        ? "Indexing is still running."
-        : indexState.status === "error"
-          ? "Q&A is unavailable until backend indexing succeeds."
-          : null;
-
-  const showCommandBar = Boolean(summary || loadingRepo || view !== "briefing");
+  const activeRepoName = useMemo(
+    () => summary?.repo_name ?? history.find((item) => item.repo_id === activeRepoId)?.repo_name ?? null,
+    [summary, history, activeRepoId]
+  );
 
   return (
-    <div className="relative flex min-h-screen w-screen flex-col overflow-hidden bg-black text-white font-sans">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(59,130,246,0.18),transparent_34rem),radial-gradient(circle_at_20%_40%,rgba(148,163,184,0.08),transparent_28rem),linear-gradient(180deg,#030303_0%,#06070a_48%,#000_100%)]" />
-      <WorkspaceNav
+    <div className="app-shell text-ink">
+      <AppSidebar
         activeView={view}
+        history={history}
+        activeRepoId={activeRepoId}
+        health={health}
         indexStatus={indexState.status}
-        onChange={handleViewChange}
+        onNavigate={navigate}
+        onSelectRepo={(repoId) => void handleSelectRepo(repoId)}
+        onDeleteRepo={(repoId) => void handleDeleteRepo(repoId)}
+        onNewAnalysis={handleNewAnalysis}
       />
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        {showCommandBar ? (
-        <header className="z-20 mx-auto mt-3 w-full max-w-6xl shrink-0 px-4">
-          <div className="flex items-center justify-between gap-3 rounded-full border border-white/10 bg-white/[0.06] px-3 py-2 shadow-[0_24px_90px_-70px_rgba(255,255,255,0.35)] backdrop-blur-2xl">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <input
-                className="h-10 min-w-0 flex-1 rounded-full border border-white/10 bg-black/45 px-5 font-mono text-[12px] text-slate-100 outline-none transition-all placeholder:text-slate-500 focus:border-white/25 focus:bg-black/70 focus:ring-4 focus:ring-white/5"
-                placeholder="https://github.com/owner/project"
-                value={repoUrl}
-                disabled={loadingRepo}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAnalyze();
-                }}
-              />
+      <div className="app-main">
+        <TopBar
+          activeView={view}
+          repoName={activeRepoName}
+          repoUrl={repoUrl}
+          loading={loadingRepo}
+          dark={dark}
+          onToggleTheme={() => setDark((current) => !current)}
+          onChangeView={navigate}
+          onAnalyze={(url) => void handleAnalyze(url)}
+          onOpenHistory={() => setSidebarOpen(true)}
+        />
+
+        <main className="app-content">
+          {error && view !== "briefing" ? (
+            <div className="mb-4 flex items-start gap-2.5 rounded-[12px] border border-red/25 bg-red-tint p-3.5 text-[12.5px] leading-5 text-red">
+              <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <strong className="block font-semibold">Request failed</strong>
+                <p className="break-words">{error}</p>
+              </div>
               <button
-                className="inline-flex h-10 items-center justify-center rounded-full bg-white px-5 text-sm font-bold text-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-200 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45"
-                disabled={loadingRepo || !repoUrl.trim()} 
-                onClick={() => handleAnalyze()}
+                type="button"
+                onClick={() => setError(null)}
+                className="flex size-6 shrink-0 items-center justify-center rounded-[6px] hover:bg-red/10"
+                aria-label="Dismiss error"
               >
-                {loadingRepo ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Analyzing...
-                  </span>
-                ) : (
-                  "Analyze Repo"
-                )}
+                <Icon name="close" size={13} />
               </button>
-            </div>
-
-            <div className="hidden items-center gap-2 lg:flex">
-            {repoId ? (
-              <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 signal-pulse" />
-                <div className="min-w-0">
-                  <span className="block text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Active</span>
-                  <strong className="block max-w-[180px] truncate font-mono text-xs text-slate-200">{summary?.repo_name ?? "Loading..."}</strong>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-500">No repository loaded</div>
-            )}
-            </div>
-          </div>
-        </header>
-        ) : null}
-
-        <main className="relative flex-1 overflow-auto px-5 py-6 lg:px-8 lg:py-7">
-          {error ? (
-            <div className="mx-auto mb-6 max-w-6xl rounded-2xl border border-red-400/20 bg-red-500/10 p-4 shadow-sm backdrop-blur-xl">
-              <div className="flex items-start gap-3">
-                <div className="text-red-300 mt-0.5">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-red-100">Error analyzing repository</h3>
-                  <p className="text-sm text-red-200/80 mt-1">{error}</p>
-                </div>
-              </div>
             </div>
           ) : null}
 
           {view === "briefing" ? (
-            <OverviewWorkspace
-              repoUrl={repoUrl}
+            <BriefingWorkspace
+              summary={summary}
               loading={loadingRepo}
               statusText={statusText}
-              repoName={summary?.repo_name ?? null}
-              summary={summary}
               warnings={warnings}
-              indexMessage={indexState.message}
-              indexStatus={indexState.status}
-              onChangeRepoUrl={setRepoUrl}
-              onAnalyze={() => handleAnalyze()}
-              onNavigate={handleViewChange}
+              indexState={indexState}
+              insights={insights}
+              insightsLoading={insightsLoading}
+              insightsError={insightsError}
+              error={error}
+              onAnalyze={(url) => void handleAnalyze(url)}
+              onGenerateInsights={() => void handleGenerateInsights()}
+              onNavigate={navigate}
             />
           ) : null}
 
@@ -270,25 +408,52 @@ export default function App() {
               summary={summary}
               diagrams={diagrams}
               loading={loadingRepo}
-              onNavigate={handleViewChange}
+              insights={insights}
+              insightsLoading={insightsLoading}
+              insightsError={insightsError}
+              dark={dark}
+              onGenerateInsights={() => void handleGenerateInsights()}
+              onNavigate={navigate}
             />
           ) : null}
 
-          {view === "interrogate" ? (
-            <InterrogateWorkspace
-              summary={summary}
-              response={answer}
+          {view === "ask" ? (
+            <AskWorkspace
+              repoName={activeRepoName}
+              turns={turns}
               loading={asking}
-              disabled={askDisabled}
               disabledReason={askDisabledReason}
-              statusMessage={indexState.message}
-              error={askError}
-              onAsk={handleAsk}
-              onNavigate={handleViewChange}
+              indexState={indexState}
+              insights={insights}
+              onAsk={(question) => void handleAsk(question)}
             />
           ) : null}
         </main>
       </div>
+
+      {sidebarOpen ? (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/45 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close repository history"
+          />
+          <div className="relative z-10 h-full w-60 bg-page shadow-overlay">
+            <AppSidebar
+              activeView={view}
+              history={history}
+              activeRepoId={activeRepoId}
+              health={health}
+              indexStatus={indexState.status}
+              onNavigate={navigate}
+              onSelectRepo={(repoId) => void handleSelectRepo(repoId)}
+              onDeleteRepo={(repoId) => void handleDeleteRepo(repoId)}
+              onNewAnalysis={handleNewAnalysis}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
-
-from langchain_core.documents import Document
 
 from app.config import Settings, get_settings
 from app.schemas import FileAnalysis, RepoMetadata
 from app.utils.file_utils import read_text_file
+
+
+@dataclass(slots=True)
+class CodeChunk:
+    content: str
+    metadata: dict[str, str | int] = field(default_factory=dict)
 
 
 class ChunkingService:
@@ -15,10 +20,13 @@ class ChunkingService:
         self.excluded_directories = {
             item.lower() for item in self.settings.index_excluded_directories if item.strip()
         }
+        self.excluded_files = {
+            item.lower() for item in self.settings.index_excluded_files if item.strip()
+        }
 
-    def chunk_repository(self, metadata: RepoMetadata) -> list[Document]:
+    def chunk_repository(self, metadata: RepoMetadata) -> list[CodeChunk]:
         repo_root = Path(metadata.local_path)
-        documents: list[Document] = []
+        documents: list[CodeChunk] = []
 
         for file in sorted(metadata.files, key=self._index_priority):
             if self._should_skip_indexing(file):
@@ -55,6 +63,8 @@ class ChunkingService:
     def _should_skip_indexing(self, file: FileAnalysis) -> bool:
         if file.extension not in self.settings.indexable_extensions:
             return True
+        if Path(file.path).name.lower() in self.excluded_files:
+            return True
 
         path = Path(file.path)
         parent_directories = (part.lower() for part in path.parts[:-1])
@@ -77,7 +87,7 @@ class ChunkingService:
 
     def _chunk_python_file(
         self, metadata: RepoMetadata, file: FileAnalysis, content: str
-    ) -> list[Document]:
+    ) -> list[CodeChunk]:
         lines = content.splitlines()
         symbol_chunks: list[tuple[str, list[str], int | None, int | None]] = []
         symbols = sorted(
@@ -115,7 +125,7 @@ class ChunkingService:
 
     def _chunk_text_file(
         self, metadata: RepoMetadata, file: FileAnalysis, content: str
-    ) -> list[Document]:
+    ) -> list[CodeChunk]:
         chunks = [(chunk, [], None, None) for chunk in self._split_text(content)]
         return self._build_documents_for_file(metadata=metadata, file=file, chunks=chunks)
 
@@ -124,15 +134,15 @@ class ChunkingService:
         metadata: RepoMetadata,
         file: FileAnalysis,
         chunks: list[tuple[str, list[str], int | None, int | None]],
-    ) -> list[Document]:
-        documents: list[Document] = []
+    ) -> list[CodeChunk]:
+        documents: list[CodeChunk] = []
         for chunk_index, (chunk_text, symbol_names, line_start, line_end) in enumerate(chunks):
             cleaned = chunk_text.strip()
             if not cleaned:
                 continue
             documents.append(
-                Document(
-                    page_content=cleaned,
+                CodeChunk(
+                    content=cleaned,
                     metadata={
                         "repo_id": metadata.repo_id,
                         "repository_name": metadata.repo_name,

@@ -1,170 +1,218 @@
-import type { FormEvent } from "react";
+import { useState } from "react";
+import { Button } from "@/components/atoms/Button";
+import { StatusPill } from "@/components/atoms/StatusPill";
+import { Icon } from "@/components/icons/Icons";
+import LoadingState from "@/components/primitives/LoadingState";
 
-type RepoInputProps = {
-  repoUrl: string;
-  loading: boolean;
-  statusText: string | null;
-  repoName: string | null;
-  indexStatus: "idle" | "indexing" | "ready" | "error";
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-};
-
-const sampleRepos = [
-  "https://github.com/pallets/click",
-  "https://github.com/tiangolo/fastapi",
-  "https://github.com/pydantic/pydantic"
+const SAMPLES = [
+  { label: "pallets/click", url: "https://github.com/pallets/click" },
+  { label: "tiangolo/fastapi", url: "https://github.com/tiangolo/fastapi" },
+  { label: "pydantic/pydantic", url: "https://github.com/pydantic/pydantic" }
 ];
 
-const capabilities = ["AST map", "Dependency graph", "Grounded Q&A"];
-const promptChips = ["Find the entry point", "Explain service boundaries", "Map API routes"];
+const CAPABILITIES = [
+  { icon: "network" as const, label: "AST + dependency map" },
+  { icon: "sparkles" as const, label: "Free Gemini briefing" },
+  { icon: "database" as const, label: "Grounded file Q&A" }
+];
 
 export function RepoInput({
-  repoUrl,
   loading,
   statusText,
-  repoName,
   indexStatus,
-  onChange,
-  onSubmit
-}: RepoInputProps) {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSubmit();
-  };
+  onAnalyze
+}: {
+  loading: boolean;
+  statusText: string | null;
+  indexStatus: "idle" | "indexing" | "ready" | "error";
+  onAnalyze: (url: string) => void;
+}) {
+  const [repoUrl, setRepoUrl] = useState("");
 
   return (
-    <div className="relative w-full text-white">
-      <section className="relative mx-auto flex min-h-[calc(100vh-13rem)] w-full max-w-5xl flex-col items-center justify-center overflow-hidden px-3 pb-12 pt-8 text-center md:pt-10">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-[16%] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/[0.035] blur-3xl" />
-          <div className="absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black via-black/90 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black via-black/85 to-transparent" />
+    <div className="space-y-4">
+      <section className="hero-surface px-5 py-10 md:px-10 md:py-14">
+      <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="kicker">
+            <span className="size-1.5 rounded-full bg-green" />
+            Free AI · Gemini 3.5 Flash Lite
+          </span>
+          <StatusPill tone={indexStatus === "ready" ? "green" : indexStatus === "error" ? "red" : "neutral"}>
+            {indexStatus === "idle" ? "Ready to analyze" : indexStatus}
+          </StatusPill>
         </div>
 
-        <div className="relative z-10 flex w-full flex-col items-center">
-          <div className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-xs font-semibold text-slate-300 shadow-[0_18px_60px_-44px_rgba(255,255,255,0.5)] backdrop-blur-xl">
-            <span className="h-1.5 w-1.5 rounded-full bg-white signal-pulse" />
-            {repoName ? `${repoName} loaded` : "Repository intelligence"}
-          </div>
+        <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.04] tracking-[-0.04em] text-ink md:text-6xl">
+          Understand any repo
+          <span className="block text-gradient">before you open it.</span>
+        </h1>
+        <p className="mt-4 max-w-xl text-[14px] leading-6 text-ink-2 md:text-[15px]">
+          Paste a GitHub URL. RepoSketch clones it, maps the architecture, indexes the code,
+          and answers questions with exact file references — powered by a free Gemini key.
+        </p>
 
-          <h1 className="animate-fade-up mt-7 max-w-4xl text-5xl font-extrabold leading-[0.98] tracking-normal text-white md:text-6xl lg:text-7xl">
-            Type what you need to know.
-          </h1>
-
-          <p className="animate-fade-up-delay mt-5 max-w-2xl text-base leading-8 text-slate-400 md:text-lg">
-            From{" "}
-            <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-slate-200 sm:whitespace-nowrap">
-              where is the API entry point?
-            </span>{" "}
-            to{" "}
-            <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-slate-200 sm:whitespace-nowrap">
-              explain the service graph
-            </span>
-            , RepoSketch turns a codebase into diagrams, source context, and grounded answers.
-          </p>
-
-          <form onSubmit={handleSubmit} className="animate-fade-up-delay mt-9 w-full max-w-[46rem]">
-            <div className="rounded-[2rem] border border-white/[0.16] bg-[#232327]/80 p-2 shadow-[0_30px_110px_-62px_rgba(255,255,255,0.58)] backdrop-blur-2xl">
-              <div className="flex flex-col gap-2 sm:flex-row">
+        <form
+          className="mt-7 w-full max-w-2xl"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (repoUrl.trim() && !loading) onAnalyze(repoUrl.trim());
+          }}
+        >
+          <div className="rounded-[16px] border border-line-strong bg-surface p-1.5 shadow-raised">
+            <div className="flex flex-col gap-1.5 sm:flex-row">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[12px] bg-inset px-3 shadow-inset-field">
+                <Icon name="github" size={16} className="shrink-0 text-ink-3" />
                 <input
-                  type="text"
-                  className="min-h-14 min-w-0 flex-1 rounded-full border border-white/10 bg-black/70 px-5 text-center font-mono text-sm text-slate-100 outline-none transition-all placeholder:text-slate-600 focus:border-white/25 focus:bg-black sm:text-left"
-                  placeholder="https://github.com/owner/repo"
                   value={repoUrl}
+                  onChange={(event) => setRepoUrl(event.target.value)}
+                  placeholder="https://github.com/owner/project"
+                  className="h-11 min-w-0 flex-1 bg-transparent font-mono text-[13px] text-ink outline-none placeholder:text-ink-3"
                   disabled={loading}
-                  onChange={(e) => onChange(e.target.value)}
+                  aria-label="GitHub repository URL"
                 />
-                <button
-                  type="submit"
-                  className="inline-flex min-h-14 items-center justify-center rounded-full bg-white px-8 text-sm font-black text-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-200 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={loading || !repoUrl.trim()}
-                >
-                  {loading ? "Analyzing" : "Start analysis"}
-                </button>
               </div>
+              <Button type="submit" size="lg" variant="primary" disabled={loading || !repoUrl.trim()}>
+                {loading ? <Icon name="loader" size={15} className="animate-spin" /> : <Icon name="sparkles" size={15} />}
+                {loading ? "Analyzing" : "Start analysis"}
+              </Button>
             </div>
-          </form>
-
-          <div className="relative z-20 mt-5 flex flex-wrap items-center justify-center gap-2 px-3">
-            {promptChips.map((prompt) => (
-              <span
-                key={prompt}
-                className="rounded-full border border-dashed border-white/12 bg-white/[0.035] px-3 py-1.5 text-xs font-semibold text-slate-400"
-              >
-                {prompt}
-              </span>
-            ))}
           </div>
+        </form>
 
-          <div className="relative z-20 mt-3 flex flex-wrap items-center justify-center gap-2 px-3">
-            {sampleRepos.map((repo) => (
-              <button
-                key={repo}
-                type="button"
-                onClick={() => onChange(repo)}
-                className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1.5 font-mono text-xs font-medium text-slate-500 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-              >
-                {repo.replace("https://github.com/", "")}
-              </button>
-            ))}
-          </div>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+          <span className="mr-1 text-[11px] text-ink-3">Try</span>
+          {SAMPLES.map((sample) => (
+            <button
+              key={sample.url}
+              type="button"
+              onClick={() => setRepoUrl(sample.url)}
+              className="rounded-full border border-line bg-surface px-2.5 py-1 font-mono text-[10.5px] text-ink-2 shadow-hairline transition-colors hover:bg-hover hover:text-ink"
+            >
+              {sample.label}
+            </button>
+          ))}
+        </div>
 
-          <div className="relative z-20 mt-7 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-slate-500">
-            {capabilities.map((item) => (
-              <span key={item} className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">
-                {item}
-              </span>
-            ))}
-            <span className="rounded-full border border-white/10 bg-white/[0.035] px-3 py-1.5">
-              {indexStatus === "idle" ? "Awaiting index" : indexStatus}
+        {loading || statusText ? (
+          <div className="mt-6 flex w-full max-w-lg items-center gap-3 rounded-[12px] border border-line bg-surface px-3.5 py-3 text-left shadow-card">
+            <LoadingState
+              variant="Dots"
+              label={statusText ?? "Waking the backend and cloning the repository..."}
+            />
+            <span className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
+              live
             </span>
           </div>
+        ) : null}
 
-          {statusText ? (
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-4 py-2 text-sm font-semibold text-slate-200 backdrop-blur-xl">
-              <span className="h-2 w-2 rounded-full bg-white signal-pulse" />
-              {statusText}
+        <div className="mt-8 grid w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-3">
+          {CAPABILITIES.map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-2 rounded-[10px] border border-line bg-surface/70 px-3 py-2.5 text-left shadow-hairline"
+            >
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-accent-tint text-accent-ink">
+                <Icon name={item.icon} size={14} />
+              </span>
+              <span className="text-[11.5px] font-medium leading-4 text-ink-2">{item.label}</span>
             </div>
-          ) : null}
+          ))}
         </div>
+      </div>
       </section>
 
-      <section className="relative mx-auto w-full max-w-6xl px-3 pb-24 pt-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-4xl font-extrabold leading-tight tracking-normal text-white md:text-6xl">
-            See the repo take shape.
-          </h2>
-          <p className="mt-4 text-base leading-7 text-slate-500 md:text-lg">
-            One link becomes structure, diagrams, and source-grounded answers without leaving the workspace.
+      <section className="grid gap-3 md:grid-cols-3">
+        <article className="panel p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[12px] font-semibold text-ink">Architecture map</h2>
+            <Icon name="network" size={14} className="text-ink-3" />
+          </div>
+          <div className="mt-3 rounded-[9px] border border-line bg-inset/60 p-3">
+            <div className="mx-auto h-5 w-20 rounded-[4px] border border-accent/30 bg-accent-tint" />
+            <div className="mx-auto h-3 w-px bg-line-strong" />
+            <div className="grid grid-cols-3 gap-2">
+              {["api", "core", "utils"].map((label) => (
+                <div key={label} className="rounded-[4px] border border-line bg-surface px-1.5 py-1 text-center font-mono text-[9px] text-ink-2">
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex justify-between px-2">
+              {[0, 1, 2].map((index) => (
+                <span key={index} className="h-3 w-px bg-line" />
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {["routes.py", "models.py", "config.py"].map((label) => (
+                <div key={label} className="rounded-[4px] border border-line bg-surface px-1 py-0.5 text-center font-mono text-[8px] text-ink-3">
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="mt-2.5 text-[11px] leading-4 text-ink-3">
+            Parse the file tree and AST imports into three interactive Mermaid views.
           </p>
-        </div>
+        </article>
 
-        <div className="relative mt-12 overflow-hidden rounded-[2rem] border border-white/10 bg-black shadow-[0_38px_150px_-88px_rgba(255,255,255,0.42)] md:rounded-[2.4rem]">
-          <div className="aspect-[16/9] min-h-[22rem] w-full md:min-h-[34rem]">
-            <video
-              className="h-full w-full object-cover opacity-85"
-              src="/media/hands-typing.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              aria-label="Hands typing on a keyboard"
-            />
+        <article className="panel p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[12px] font-semibold text-ink">AI briefing</h2>
+            <Icon name="sparkles" size={14} className="text-ink-3" />
           </div>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,transparent_0,transparent_18rem,rgba(0,0,0,0.34)_34rem),linear-gradient(180deg,rgba(0,0,0,0.14)_0%,rgba(0,0,0,0.22)_56%,rgba(0,0,0,0.7)_100%)]" />
-          <div className="absolute bottom-5 left-1/2 flex w-[calc(100%-2.5rem)] max-w-3xl -translate-x-1/2 flex-wrap items-center justify-center gap-2">
-            {promptChips.map((prompt) => (
-              <span
-                key={prompt}
-                className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-slate-300 backdrop-blur-xl"
-              >
-                {prompt}
+          <div className="mt-3 rounded-[9px] border border-line bg-inset/60 p-3">
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-[4px] bg-accent-tint px-1.5 py-0.5 font-mono text-[8px] text-accent-ink">
+                gemini-3.5-flash-lite
               </span>
-            ))}
+              <span className="text-[8px] text-ink-3">cached</span>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              <div className="h-1.5 w-full rounded-full bg-line-strong/70" />
+              <div className="h-1.5 w-11/12 rounded-full bg-line-strong/70" />
+              <div className="h-1.5 w-4/5 rounded-full bg-line-strong/70" />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1">
+              {["src/main.py", "api/routes.py"].map((file) => (
+                <span key={file} className="rounded-[3px] border border-line bg-surface px-1 py-0.5 font-mono text-[8px] text-ink-2">
+                  {file}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+          <p className="mt-2.5 text-[11px] leading-4 text-ink-3">
+            Get an overview, architecture notes, entry points, risks, and next questions.
+          </p>
+        </article>
+
+        <article className="panel p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[12px] font-semibold text-ink">Grounded answers</h2>
+            <Icon name="chat" size={14} className="text-ink-3" />
+          </div>
+          <div className="mt-3 rounded-[9px] border border-line bg-inset/60 p-3">
+            <div className="ml-auto w-fit max-w-[90%] rounded-[7px] rounded-br-[2px] bg-surface px-2 py-1 text-[9px] text-ink-2 shadow-hairline">
+              Where is auth configured?
+            </div>
+            <div className="mt-2 flex gap-1.5">
+              <span className="mt-0.5 size-3.5 shrink-0 rounded-full bg-ink" />
+              <div className="min-w-0 flex-1 rounded-[7px] rounded-tl-[2px] border border-line bg-surface px-2 py-1.5">
+                <div className="space-y-1">
+                  <div className="h-1 w-full rounded-full bg-line-strong/60" />
+                  <div className="h-1 w-10/12 rounded-full bg-line-strong/60" />
+                </div>
+                <div className="mt-1.5 flex gap-1">
+                  <span className="rounded-[3px] bg-accent-tint px-1 py-0.5 font-mono text-[7px] text-accent-ink">auth.py</span>
+                  <span className="rounded-[3px] bg-green-tint px-1 py-0.5 font-mono text-[7px] text-green">94%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="mt-2.5 text-[11px] leading-4 text-ink-3">
+            Every answer cites files, symbols, relevance scores, and retrieved chunks.
+          </p>
+        </article>
       </section>
     </div>
   );

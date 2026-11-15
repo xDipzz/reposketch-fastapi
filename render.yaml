@@ -3,24 +3,44 @@ services:
     name: reposketch-api
     runtime: python
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
+    autoDeploy: true
+    healthCheckPath: /health
+    buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
     startCommand: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
       - key: APP_ENV
         value: production
+      - key: APP_VERSION
+        value: 1.1.0
       - key: FRONTEND_ORIGIN
         sync: false
       - key: REPO_STORAGE_DIR
         value: /tmp/reposketch/repos
       - key: ANALYSIS_STORAGE_DIR
         value: /tmp/reposketch/analysis
-      - key: CHROMA_PERSIST_DIR
-        value: /tmp/reposketch/chroma
-      - key: OPENAI_API_KEY
+      - key: VECTOR_STORE_DIR
+        value: /tmp/reposketch/vectors
+      - key: MAX_FILE_SIZE_KB
+        value: 256
+      - key: MAX_REPO_FILES
+        value: 4000
+      - key: MAX_REPO_SIZE_MB
+        value: 400
+      - key: MAX_INDEX_CHUNKS
+        value: 1200
+      - key: INDEX_EMBEDDING_PROVIDER
+        value: local
+      - key: GEMINI_API_KEY
         sync: false
-      - key: OPENAI_CHAT_MODEL
-        value: gpt-4o-mini
-      - key: OPENAI_EMBEDDING_MODEL
-        value: text-embedding-3-small
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: GEMINI_EMBEDDING_DIMENSIONS
+        value: 768
+      - key: GEMINI_TIMEOUT_SECONDS
+        value: 90
+      - key: GEMINI_MAX_RETRIES
+        value: 2

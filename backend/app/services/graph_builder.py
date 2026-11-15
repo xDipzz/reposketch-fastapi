@@ -18,7 +18,7 @@ class GraphBundle:
 
 
 class GraphBuilder:
-    MAX_STRUCTURE_REPRESENTATIVES_PER_FOLDER = 3
+    MAX_STRUCTURE_REPRESENTATIVES_PER_FOLDER = 2
     MAX_DEPENDENCY_NODES = 14
     MAX_DEPENDENCY_EDGES = 18
     SOURCE_LAYOUT_FOLDERS = {"src", "lib"}
@@ -42,14 +42,20 @@ class GraphBuilder:
             top_key = path.parts[0] if len(path.parts) > 1 else "__root__"
             grouped[top_key].append(file.path)
 
-        selected_paths: set[str] = set()
-        for file in metadata.files:
-            if len(Path(file.path).parts) == 1:
-                selected_paths.add(file.path)
-
+        root_level_selected: list[str] = []
         for folder_name, items in grouped.items():
             if folder_name == "__root__":
+                ranked_root = sorted(
+                    items,
+                    key=lambda item: (
+                        0 if item in metadata.entry_points else 1,
+                        0 if item in metadata.important_files else 1,
+                        item,
+                    ),
+                )
+                root_level_selected = ranked_root[:4]
                 continue
+
             ranked = sorted(
                 items,
                 key=lambda item: (
@@ -59,28 +65,21 @@ class GraphBuilder:
                     item,
                 ),
             )
-            selected_paths.update(ranked[: self.MAX_STRUCTURE_REPRESENTATIVES_PER_FOLDER])
+            graph.add_node(folder_name, label=folder_name, kind="folder")
+            graph.add_edge(root_node, folder_name)
+            for relative_path in ranked[: self.MAX_STRUCTURE_REPRESENTATIVES_PER_FOLDER]:
+                graph.add_node(relative_path, label=Path(relative_path).name, kind="file")
+                graph.add_edge(folder_name, relative_path)
 
-        root_level_files = sorted(
-            path_value for path_value in selected_paths if len(Path(path_value).parts) == 1
-        )
         root_files_parent = root_node
-        if len(root_level_files) > 3:
+        if len(root_level_selected) > 2:
             root_files_parent = f"{root_node}/key-files"
             graph.add_node(root_files_parent, label="key files", kind="folder")
             graph.add_edge(root_node, root_files_parent)
 
-        for relative_path in sorted(selected_paths):
-            parts = Path(relative_path).parts
-            parent = root_files_parent if len(parts) == 1 and root_files_parent != root_node else root_node
-            built_parts: list[str] = []
-            for index, part in enumerate(parts):
-                built_parts.append(part)
-                node_name = "/".join(built_parts)
-                kind = "file" if index == len(parts) - 1 else "folder"
-                graph.add_node(node_name, label=part, kind=kind)
-                graph.add_edge(parent, node_name)
-                parent = node_name
+        for relative_path in root_level_selected:
+            graph.add_node(relative_path, label=Path(relative_path).name, kind="file")
+            graph.add_edge(root_files_parent, relative_path)
 
         return graph
 

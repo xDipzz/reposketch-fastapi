@@ -21,7 +21,6 @@ function resolveApiBaseUrl() {
     const runningLocally = isLoopbackHost(hostname);
 
     if (configuredBaseUrl) {
-      // Ignore loopback-only URLs in deployed environments.
       if (!runningLocally && isLoopbackBaseUrl(configuredBaseUrl)) {
         return "/api";
       }
@@ -33,17 +32,17 @@ function resolveApiBaseUrl() {
     }
   }
 
-  // Use Vercel's same-origin rewrite in deployed environments.
   return configuredBaseUrl || "/api";
 }
 
 const apiBaseUrl = resolveApiBaseUrl();
-const REPOSITORY_LOAD_TIMEOUT_MS = 120_000;
+const REPOSITORY_LOAD_TIMEOUT_MS = 180_000;
 const REPOSITORY_INDEX_TIMEOUT_MS = 300_000;
+const INSIGHTS_TIMEOUT_MS = 120_000;
 
 export const apiClient = axios.create({
   baseURL: apiBaseUrl,
-  timeout: 30000
+  timeout: 60_000
 });
 
 export type Diagram = {
@@ -81,6 +80,12 @@ export type RepoLoadResponse = {
     repo_id: string;
     repo_name: string;
     repo_url: string;
+    loaded_at: string;
+    detected_framework: string | null;
+    file_count: number;
+    indexed_file_count: number;
+    total_classes: number;
+    total_functions: number;
     warnings: string[];
   };
   summary: Summary;
@@ -96,11 +101,15 @@ export type IndexResponse = {
   indexed_chunks: number;
   status: string;
   indexed_at: string;
+  embedding_provider: string;
+  embedding_model: string;
+  warnings: string[];
 };
 
 export type AskResponse = {
   repo_id: string;
   repo_name: string;
+  question: string;
   answer: string;
   sources: Array<{ file_path: string; symbol_names: string[] }>;
   retrieved_chunks: Array<{
@@ -110,6 +119,50 @@ export type AskResponse = {
     symbol_names: string[];
     score?: number | null;
   }>;
+  provider: string;
+};
+
+export type RepoInsights = {
+  overview: string;
+  architecture: string;
+  onboarding: string;
+  entry_points: string[];
+  risks: string[];
+  suggested_questions: string[];
+  generated_at: string | null;
+  model: string;
+};
+
+export type InsightsResponse = {
+  repo_id: string;
+  repo_name: string;
+  insights: RepoInsights;
+};
+
+export type RepoHistoryItem = {
+  repo_id: string;
+  repo_name: string;
+  repo_url: string;
+  loaded_at: string;
+  detected_framework: string | null;
+  file_count: number;
+  indexed_file_count: number;
+  indexed_chunks: number;
+  has_insights: boolean;
+  embedding_provider: string | null;
+};
+
+export type Health = {
+  status: string;
+  app_name: string;
+  environment: string;
+  version: string;
+  ai_configured: boolean;
+  ai_model: string;
+  embedding_model: string;
+  embedding_provider: string;
+  vector_store: string;
+  uptime_seconds: number;
 };
 
 export async function loadRepository(repoUrl: string) {
@@ -138,21 +191,49 @@ export async function fetchDiagrams(repoId: string) {
 export async function indexRepository(repoId: string) {
   const { data } = await apiClient.post(
     "/analyze/index",
-    {
-      repo_id: repoId,
-      force_reindex: true
-    },
+    { repo_id: repoId, force_reindex: true },
     { timeout: REPOSITORY_INDEX_TIMEOUT_MS }
   );
   return data as IndexResponse;
 }
 
-export async function askRepository(repoId: string | null, question: string) {
-  const { data } = await apiClient.post("/ask", {
-    repo_id: repoId,
-    question,
-    top_k: 6
+export async function fetchCachedInsights(repoId: string) {
+  const { data } = await apiClient.get("/analyze/insights", {
+    params: { repo_id: repoId }
   });
+  return (data as InsightsResponse).insights;
+}
+
+export async function fetchInsights(repoId: string, forceRegenerate = false) {
+  const { data } = await apiClient.post(
+    "/analyze/insights",
+    { repo_id: repoId, force_regenerate: forceRegenerate },
+    { timeout: INSIGHTS_TIMEOUT_MS }
+  );
+  return data as InsightsResponse;
+}
+
+export async function fetchRepositories() {
+  const { data } = await apiClient.get("/analyze/repositories");
+  return data.repositories as RepoHistoryItem[];
+}
+
+export async function fetchHealth() {
+  const { data } = await apiClient.get("/health");
+  return data as Health;
+}
+
+export async function deleteRepository(repoId: string) {
+  const { data } = await apiClient.delete(`/analyze/repository/${repoId}`);
+  return data as { status: string; repo_id: string };
+}
+
+export async function askRepository(repoId: string | null, question: string) {
+  const { data } = await apiClient.post(
+    "/ask",
+    { repo_id: repoId, question, top_k: 6 },
+    { timeout: 120_000 }
+  );
   return data as AskResponse;
 }
 
@@ -161,6 +242,14 @@ export function extractApiError(error: unknown) {
     const detail = error.response?.data?.detail;
     if (typeof detail === "string" && detail.trim()) {
       return detail;
+    }
+    if (Array.isArray(detail)) {
+      return detail
+        .map((item) => (typeof item?.msg === "string" ? item.msg : JSON.stringify(item)))
+        .join("; ");
+    }
+    if (error.code === "ECONNABORTED") {
+      return "The request timed out. The backend may still be waking up — try again.";
     }
     return error.message;
   }
